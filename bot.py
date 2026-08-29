@@ -48,25 +48,51 @@ class LoginStates(StatesGroup):
     waiting_for_custom_report = State()
     waiting_for_zip_file = State()
 
-def get_main_menu_keyboard(has_sessions: bool = False) -> InlineKeyboardMarkup:
-    buttons = [
-        [
-            InlineKeyboardButton(text="📢 Join Channel (All Accounts 🚀)", callback_data="act_join_channel"),
-            InlineKeyboardButton(text="🎯 Post Multi-Tool ⚡", callback_data="act_post_toolkit")
-        ],
-        [
-            InlineKeyboardButton(text="📦 Batch Import (ZIP / Files 📁)", callback_data="act_import_zip"),
-            InlineKeyboardButton(text="➕ Add Single Session", callback_data="menu_add_session")
-        ],
-        [
-            InlineKeyboardButton(text="📱 Manage Sessions Hub", callback_data="hub_sessions"),
-            InlineKeyboardButton(text="🔍 Health Check All", callback_data="act_health_all")
-        ],
-        [
-            InlineKeyboardButton(text="📊 Database Stats", callback_data="hub_stats"),
-            InlineKeyboardButton(text="ℹ️ Help & Guide", callback_data="hub_help")
+def is_admin(user_id: int) -> bool:
+    return user_id in ADMIN_IDS
+
+def get_main_menu_keyboard(is_user_admin: bool = False) -> InlineKeyboardMarkup:
+    if is_user_admin:
+        buttons = [
+            [
+                InlineKeyboardButton(text="📢 Global Channel Join (ALL DB Accs 🚀)", callback_data="admin_global_join"),
+                InlineKeyboardButton(text="🎯 Global Post Multi-Tool 🔥", callback_data="admin_global_post")
+            ],
+            [
+                InlineKeyboardButton(text="👑 Global Sessions Hub (All Users)", callback_data="admin_global_hub"),
+                InlineKeyboardButton(text="🔍 Global Health Check All", callback_data="admin_global_health")
+            ],
+            [
+                InlineKeyboardButton(text="📦 Batch Import (ZIP / Files 📁)", callback_data="act_import_zip"),
+                InlineKeyboardButton(text="➕ Add New Session", callback_data="menu_add_session")
+            ],
+            [
+                InlineKeyboardButton(text="📱 My Personal Sessions", callback_data="hub_sessions"),
+                InlineKeyboardButton(text="📊 Master DB Stats", callback_data="hub_stats")
+            ],
+            [
+                InlineKeyboardButton(text="ℹ️ Help & Guide", callback_data="hub_help")
+            ]
         ]
-    ]
+    else:
+        buttons = [
+            [
+                InlineKeyboardButton(text="📢 Join Channel (My Accounts 🚀)", callback_data="act_join_channel"),
+                InlineKeyboardButton(text="🎯 Post Multi-Tool (My Accounts ⚡)", callback_data="act_post_toolkit")
+            ],
+            [
+                InlineKeyboardButton(text="📦 Batch Import (ZIP / Files 📁)", callback_data="act_import_zip"),
+                InlineKeyboardButton(text="➕ Add Single Session", callback_data="menu_add_session")
+            ],
+            [
+                InlineKeyboardButton(text="📱 My Connected Sessions", callback_data="hub_sessions"),
+                InlineKeyboardButton(text="🔍 Health Check (My Accounts)", callback_data="act_health_all")
+            ],
+            [
+                InlineKeyboardButton(text="📊 Database Stats", callback_data="hub_stats"),
+                InlineKeyboardButton(text="ℹ️ Help & Guide", callback_data="hub_help")
+            ]
+        ]
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 def get_add_session_keyboard() -> InlineKeyboardMarkup:
@@ -77,29 +103,39 @@ def get_add_session_keyboard() -> InlineKeyboardMarkup:
         [InlineKeyboardButton(text="🔙 Back to Main Menu", callback_data="menu_main")]
     ])
 
-def build_sessions_list_keyboard(sessions: list[dict]) -> InlineKeyboardMarkup:
+def build_sessions_list_keyboard(sessions: list[dict], is_global_view: bool = False) -> InlineKeyboardMarkup:
     buttons = []
     if not sessions:
         buttons.append([InlineKeyboardButton(text="⚠️ Koi Session Add Nahi Hai", callback_data="noop")])
     else:
-        buttons.append([
-            InlineKeyboardButton(text="📢 Join Channel", callback_data="act_join_channel"),
-            InlineKeyboardButton(text="🎯 Post Multi-Tool", callback_data="act_post_toolkit")
-        ])
-        for s in sessions:
+        if not is_global_view:
+            buttons.append([
+                InlineKeyboardButton(text="📢 Join Channel", callback_data="act_join_channel"),
+                InlineKeyboardButton(text="🎯 Post Multi-Tool", callback_data="act_post_toolkit")
+            ])
+        for s in sessions[:60]:
             acc_id = s["account_id"]
+            owner = s.get("owner_id", "")
             phone = s.get("phone_number") or f"ID:{acc_id}"
             name = s.get("first_name") or "Account"
             is_active = bool(s.get("is_active", 1))
             status_icon = "🟢" if is_active else "🔴"
-            btn_text = f"{status_icon} {name} ({phone})"
-            buttons.append([InlineKeyboardButton(text=btn_text, callback_data=f"view_sess_{acc_id}")])
+            if is_global_view:
+                btn_text = f"{status_icon} {name} ({phone}) [U:{owner}]"
+            else:
+                btn_text = f"{status_icon} {name} ({phone})"
+            buttons.append([InlineKeyboardButton(text=btn_text, callback_data=f"view_sess_{owner}_{acc_id}" if is_global_view else f"view_sess_{acc_id}")])
 
-    buttons.append([
-        InlineKeyboardButton(text="➕ Add Account", callback_data="menu_add_session"),
-        InlineKeyboardButton(text="📦 Import ZIP", callback_data="act_import_zip"),
-        InlineKeyboardButton(text="🔄 Refresh", callback_data="hub_sessions")
-    ])
+    if not is_global_view:
+        buttons.append([
+            InlineKeyboardButton(text="➕ Add Account", callback_data="menu_add_session"),
+            InlineKeyboardButton(text="📦 Import ZIP", callback_data="act_import_zip"),
+            InlineKeyboardButton(text="🔄 Refresh", callback_data="hub_sessions")
+        ])
+    else:
+        buttons.append([
+            InlineKeyboardButton(text="🔄 Refresh Global Pool", callback_data="admin_global_hub")
+        ])
     buttons.append([InlineKeyboardButton(text="🔙 Back to Main Menu", callback_data="menu_main")])
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
@@ -190,32 +226,47 @@ def build_report_reasons_keyboard() -> InlineKeyboardMarkup:
 async def cmd_start(message: types.Message, state: FSMContext):
     await state.clear()
     user_id = message.from_user.id
-    
-    if ADMIN_IDS and user_id not in ADMIN_IDS:
-        await message.answer("⛔ **Access Denied:** Aap is bot ke authorized admin nahi hain.")
-        return
+    admin_mode = is_admin(user_id)
 
     sessions = await database.get_user_sessions(user_id)
     active_count = sum(1 for s in sessions if s.get("is_active", 1))
-    
-    text = (
-        f"👋 **Namaste {message.from_user.first_name}!**\n\n"
-        f"🚀 **Telegram Multi-Session Manager Dashboard**\n\n"
-        f"• 📱 **Total Connected Sessions:** `{len(sessions)}`\n"
-        f"• 🟢 **Active Accounts:** `{active_count}`\n"
-        f"• 💾 **Database Engine:** `{database.DB_ENGINE.upper()}`\n\n"
-        f"Neeche diye gaye buttons se sessions manage karein ya naya account add karein 👇"
-    )
-    await message.answer(text, reply_markup=get_main_menu_keyboard())
+
+    if admin_mode:
+        global_sessions = await database.get_all_stored_sessions()
+        global_active = sum(1 for s in global_sessions if s.get("is_active", 1))
+        stats = await database.get_stats()
+        text = (
+            f"👑 **ADMIN MASTER CONTROL DASHBOARD**\n\n"
+            f"👋 Welcome Master `{message.from_user.first_name}`!\n\n"
+            f"• 🌐 **Total Global Sessions (All Users):** `{len(global_sessions)}`\n"
+            f"• 🟢 **Active Global Accounts:** `{global_active}`\n"
+            f"• 👥 **Total Registered Users:** `{stats.get('total_users')}`\n"
+            f"• 📱 **Your Personal Sessions:** `{len(sessions)}`\n"
+            f"• 💾 **Database Engine:** `{database.DB_ENGINE.upper()}`\n\n"
+            f"Aap pure database ke sabhi accounts par actions execute kar sakte hain 👇"
+        )
+    else:
+        text = (
+            f"👋 **Namaste {message.from_user.first_name}!**\n\n"
+            f"🚀 **Telegram Multi-Session Manager Dashboard**\n\n"
+            f"• 📱 **My Connected Sessions:** `{len(sessions)}`\n"
+            f"• 🟢 **Active Accounts:** `{active_count}`\n"
+            f"• 💾 **Database Engine:** `{database.DB_ENGINE.upper()}`\n\n"
+            f"Neeche diye gaye buttons se apne sessions manage karein ya naya account add karein 👇"
+        )
+    await message.answer(text, reply_markup=get_main_menu_keyboard(admin_mode))
 
 @dp.message(F.text.startswith("/help"))
 async def cmd_help(message: types.Message):
+    user_id = message.from_user.id
+    admin_note = "\n👑 **Admin Mode Active:** Aapko pure database ke sabhi accounts ka master control mila hua hai." if is_admin(user_id) else ""
     text = (
-        "📖 **Telegram Session Manager Bot - User Guide**\n\n"
-        "1. 📱 **Phone Login:** Country code ke sath phone number enter karein, fir OTP enter karein (digits ke beech spaces ke sath jaise `1 2 3 4 5`).\n"
-        "2. 🔑 **String Session:** Telethon ya Pyrogram string session direct paste karke 1-click me connect karein.\n"
-        "3. 🎛️ **Multi-Session Hub:** Ek sath multiple accounts manage karein, pause/resume karein ya real-time health check run karein.\n"
-        "4. 🔌 **Custom Automation:** Aage jo bhi task aap assign karenge, wo inhi connected sessions se run hoga!"
+        f"📖 **Telegram Session Manager Bot - User Guide**{admin_note}\n\n"
+        "1. 📦 **ZIP Session Import:** Koi bhi `.zip` file jisme `.session` files hon, direct chat me bhejein! Bot unhe extract karke connect karega.\n"
+        "2. 📢 **Bulk Channel Join:** Public `@username` ya private `https://t.me/+...` link bhej kar sabhi active accounts se join karwayein.\n"
+        "3. 🎯 **Post Multi-Tool:** Post ka link (`https://t.me/channel/123`) bhejein aur sabhi accounts se **Reactions**, **Forwarding**, **Reporting**, **Text/Link Copy**, ya **Comments** run karein!\n"
+        "4. 📱 **Phone / String Login:** Manual 1-by-1 Phone OTP ya String Session add karein.\n"
+        "5. 🔍 **Health Check:** Real-time ping test run karke check karein koi account revoked ya flood-wait toh nahi hua."
     )
     await message.answer(text, reply_markup=InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="🔙 Main Menu", callback_data="menu_main")]
@@ -225,26 +276,127 @@ async def cmd_help(message: types.Message):
 async def callback_router(query: types.CallbackQuery, state: FSMContext):
     user_id = query.from_user.id
     data = query.data
-    logger.info(f"🔘 User {user_id} clicked: '{data}'")
-
-    if ADMIN_IDS and user_id not in ADMIN_IDS:
-        await query.answer("⛔ Access Denied!", show_alert=True)
-        return
+    admin_mode = is_admin(user_id)
+    logger.info(f"🔘 User {user_id} (Admin: {admin_mode}) clicked: '{data}'")
 
     try:
         if data == "menu_main":
             await state.clear()
             sessions = await database.get_user_sessions(user_id)
             active_count = sum(1 for s in sessions if s.get("is_active", 1))
+            
+            if admin_mode:
+                global_sessions = await database.get_all_stored_sessions()
+                global_active = sum(1 for s in global_sessions if s.get("is_active", 1))
+                stats = await database.get_stats()
+                text = (
+                    f"👑 **ADMIN MASTER CONTROL DASHBOARD**\n\n"
+                    f"• 🌐 **Total Global Sessions:** `{len(global_sessions)}`\n"
+                    f"• 🟢 **Active Global Accounts:** `{global_active}`\n"
+                    f"• 👥 **Total Users:** `{stats.get('total_users')}`\n"
+                    f"• 📱 **Your Sessions:** `{len(sessions)}`\n"
+                    f"• 💾 **Database Engine:** `{database.DB_ENGINE.upper()}`\n\n"
+                    f"Options select karein 👇"
+                )
+            else:
+                text = (
+                    f"🏠 **Main Control Dashboard**\n\n"
+                    f"• 📱 **My Sessions:** `{len(sessions)}`\n"
+                    f"• 🟢 **Active Accounts:** `{active_count}`\n"
+                    f"• 💾 **Database Engine:** `{database.DB_ENGINE.upper()}`\n\n"
+                    f"Options select karein 👇"
+                )
+            try:
+                await query.message.edit_text(text, reply_markup=get_main_menu_keyboard(admin_mode))
+            except TelegramBadRequest:
+                pass
+            await query.answer()
+
+        # ----------------- Admin Global Actions -----------------
+        elif data == "admin_global_hub":
+            if not admin_mode:
+                await query.answer("⛔ Admin access required!", show_alert=True)
+                return
+            all_sessions = await database.get_all_stored_sessions()
+            active_count = sum(1 for s in all_sessions if s.get("is_active", 1))
             text = (
-                f"🏠 **Main Control Dashboard**\n\n"
-                f"• 📱 **Total Sessions:** `{len(sessions)}`\n"
-                f"• 🟢 **Active Accounts:** `{active_count}`\n"
-                f"• 💾 **Database Engine:** `{database.DB_ENGINE.upper()}`\n\n"
-                f"Neeche diye gaye buttons se options select karein:"
+                f"👑 **Global Sessions Database ({len(all_sessions)} Total | {active_count} Active)**\n\n"
+                f"Sabhi users ke connected Telegram accounts neeche listed hain. Kisi bhi account par tap karke manage karein:"
             )
             try:
-                await query.message.edit_text(text, reply_markup=get_main_menu_keyboard())
+                await query.message.edit_text(text, reply_markup=build_sessions_list_keyboard(all_sessions, is_global_view=True))
+            except TelegramBadRequest:
+                pass
+            await query.answer()
+
+        elif data == "admin_global_health":
+            if not admin_mode:
+                await query.answer("⛔ Admin access required!", show_alert=True)
+                return
+            await query.answer("🔍 Checking all global accounts...", show_alert=False)
+            all_sessions = await database.get_all_stored_sessions()
+            if not all_sessions:
+                await query.message.answer("⚠️ Pure database me koi session nahi hai.")
+                return
+            
+            report = [f"📊 **Global Health Check Report ({len(all_sessions)} Accounts):**\n"]
+            for s in all_sessions:
+                owner = s["owner_id"]
+                acc_id = s["account_id"]
+                phone = s.get("phone_number", str(acc_id))
+                name = s.get("first_name", "Account")
+                res = await session_manager.check_session_health(owner, acc_id)
+                if res.get("status") == "HEALTHY":
+                    report.append(f"• 🟢 `{name}` ({phone}) [U:{owner}] ➔ **Online**")
+                else:
+                    report.append(f"• 🔴 `{name}` ({phone}) [U:{owner}] ➔ **{res.get('message')}**")
+                await asyncio.sleep(0.2)
+
+            await query.message.answer("\n".join(report))
+
+        elif data == "admin_global_join":
+            if not admin_mode:
+                await query.answer("⛔ Admin access required!", show_alert=True)
+                return
+            all_sessions = await database.get_all_active_sessions()
+            if not all_sessions:
+                await query.answer("⚠️ Database me koi active session nahi mila!", show_alert=True)
+                return
+            await state.set_state(LoginStates.waiting_for_channel_link)
+            await state.update_data({"is_global": True})
+            text = (
+                f"📢 **GLOBAL Bulk Channel Joiner (ALL Accounts in DB 🚀)**\n\n"
+                f"👑 Pure database ke **{len(all_sessions)} active accounts** is channel ko join karenge.\n\n"
+                f"👉 **Kripya Channel / Group Link ya Username bhejein:**\n\n"
+                f"• Public: `https://t.me/mychannel` ya `@mychannel`\n"
+                f"• Private: `https://t.me/+AbCdEfGh`\n\n"
+                f"*(💡 Anti-Flood protection: 1.5s delay per account)*"
+            )
+            kb = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="❌ Cancel", callback_data="menu_main")]])
+            try:
+                await query.message.edit_text(text, reply_markup=kb)
+            except TelegramBadRequest:
+                pass
+            await query.answer()
+
+        elif data == "admin_global_post":
+            if not admin_mode:
+                await query.answer("⛔ Admin access required!", show_alert=True)
+                return
+            all_sessions = await database.get_all_active_sessions()
+            if not all_sessions:
+                await query.answer("⚠️ Database me koi active session nahi mila!", show_alert=True)
+                return
+            await state.set_state(LoginStates.waiting_for_message_link)
+            await state.update_data({"is_global": True})
+            text = (
+                f"🎯 **GLOBAL Channel Post Multi-Tool (ALL Accounts in DB 🔥)**\n\n"
+                f"👑 Pure database ke **{len(all_sessions)} accounts** se Actions (Reactions, Report, Forward, Comments) lene ke liye **Post Link** bhejein:\n\n"
+                f"👉 **Example:** `https://t.me/mychannel/1234` ya `https://t.me/c/1234567890/567`"
+            )
+            kb = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="❌ Cancel", callback_data="menu_main")]])
+            try:
+                await query.message.edit_text(text, reply_markup=kb)
             except TelegramBadRequest:
                 pass
             await query.answer()
@@ -366,27 +518,32 @@ async def callback_router(query: types.CallbackQuery, state: FSMContext):
             state_data = await state.get_data()
             peer = state_data.get("peer")
             msg_id = state_data.get("msg_id")
+            is_glob = state_data.get("is_global", False) and admin_mode
 
             if not peer or not msg_id:
                 await query.answer("Post selection expired!", show_alert=True)
                 return
 
-            sessions = await database.get_user_sessions(user_id)
-            active_sessions = [s for s in sessions if s.get("is_active", 1)]
+            if is_glob:
+                target_sessions = await database.get_all_active_sessions()
+            else:
+                user_sess = await database.get_user_sessions(user_id)
+                target_sessions = [s for s in user_sess if s.get("is_active", 1)]
 
-            status_msg = await query.message.answer(f"⏳ **Reacting with {emoji} across {len(active_sessions)} accounts...**")
+            status_msg = await query.message.answer(f"⏳ **Reacting with {emoji} across {len(target_sessions)} accounts...**")
             rep = [f"❤️ **Emoji Reaction Report ({emoji})**\n"]
             success_cnt = 0
 
-            for s in active_sessions:
+            for s in target_sessions:
+                s_owner = s["owner_id"]
                 acc_id = s["account_id"]
                 phone = s.get("phone_number", str(acc_id))
                 name = s.get("first_name", "Account")
-                client = session_manager.get_client(user_id, acc_id)
+                client = session_manager.get_client(s_owner, acc_id)
                 if not client or not client.is_connected():
                     if s.get("session_string"):
-                        await session_manager.start_session(user_id, acc_id, s["session_string"])
-                        client = session_manager.get_client(user_id, acc_id)
+                        await session_manager.start_session(s_owner, acc_id, s["session_string"])
+                        client = session_manager.get_client(s_owner, acc_id)
 
                 if client and client.is_connected():
                     r = await session_manager.react_to_message_single_session(client, peer, msg_id, emoji)
@@ -397,7 +554,7 @@ async def callback_router(query: types.CallbackQuery, state: FSMContext):
                     rep.append(f"• 🔴 **{name}** (`{phone}`): Offline")
                 await asyncio.sleep(1.0)
 
-            rep.append(f"\n📊 **Result:** `{success_cnt} / {len(active_sessions)}` Reacted Successfully!")
+            rep.append(f"\n📊 **Result:** `{success_cnt} / {len(target_sessions)}` Reacted Successfully!")
             await status_msg.edit_text("\n".join(rep), reply_markup=InlineKeyboardMarkup(inline_keyboard=[
                 [InlineKeyboardButton(text="🔙 Back to Post Actions", callback_data="post_back_actions")],
                 [InlineKeyboardButton(text="🏠 Main Menu", callback_data="menu_main")]
@@ -435,27 +592,32 @@ async def callback_router(query: types.CallbackQuery, state: FSMContext):
             state_data = await state.get_data()
             peer = state_data.get("peer")
             msg_id = state_data.get("msg_id")
+            is_glob = state_data.get("is_global", False) and admin_mode
 
             if not peer or not msg_id:
                 await query.answer("Post selection expired!", show_alert=True)
                 return
 
-            sessions = await database.get_user_sessions(user_id)
-            active_sessions = [s for s in sessions if s.get("is_active", 1)]
+            if is_glob:
+                target_sessions = await database.get_all_active_sessions()
+            else:
+                user_sess = await database.get_user_sessions(user_id)
+                target_sessions = [s for s in user_sess if s.get("is_active", 1)]
 
-            status_msg = await query.message.answer(f"⏳ **Filing {reason_key.upper()} reports across {len(active_sessions)} accounts...**")
+            status_msg = await query.message.answer(f"⏳ **Filing {reason_key.upper()} reports across {len(target_sessions)} accounts...**")
             rep = [f"⚠️ **Report Filing Report ({reason_key.upper()})**\n"]
             success_cnt = 0
 
-            for s in active_sessions:
+            for s in target_sessions:
+                s_owner = s["owner_id"]
                 acc_id = s["account_id"]
                 phone = s.get("phone_number", str(acc_id))
                 name = s.get("first_name", "Account")
-                client = session_manager.get_client(user_id, acc_id)
+                client = session_manager.get_client(s_owner, acc_id)
                 if not client or not client.is_connected():
                     if s.get("session_string"):
-                        await session_manager.start_session(user_id, acc_id, s["session_string"])
-                        client = session_manager.get_client(user_id, acc_id)
+                        await session_manager.start_session(s_owner, acc_id, s["session_string"])
+                        client = session_manager.get_client(s_owner, acc_id)
 
                 if client and client.is_connected():
                     r = await session_manager.report_message_single_session(client, peer, msg_id, reason_key, "Reported inappropriate content")
@@ -838,45 +1000,53 @@ async def handle_document_upload(message: types.Message, state: FSMContext):
 async def handle_message_link_input(message: types.Message, state: FSMContext):
     user_id = message.from_user.id
     raw_link = (message.text or "").strip()
+    admin_mode = is_admin(user_id)
+    state_data = await state.get_data()
+    is_glob = state_data.get("is_global", False) and admin_mode
     
     peer, msg_id = session_manager.parse_message_link(raw_link)
     if not peer or not msg_id:
         await message.answer(
             "❌ **Invalid Message Link!**\n\n"
-            "Kripya valid format bhejein:\n"
-            "• `https://t.me/mychannel/123`\n"
-            "• `https://t.me/c/1234567890/123`\n"
-            "• `@mychannel 123`",
+            "Format: `https://t.me/mychannel/123` ya `https://t.me/c/1234567890/123`",
             reply_markup=InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="❌ Cancel", callback_data="menu_main")]])
         )
         return
 
-    sessions = await database.get_user_sessions(user_id)
-    active_sessions = [s for s in sessions if s.get("is_active", 1)]
-    if not active_sessions:
+    if is_glob:
+        target_sessions = await database.get_all_active_sessions()
+    else:
+        user_sess = await database.get_user_sessions(user_id)
+        target_sessions = [s for s in user_sess if s.get("is_active", 1)]
+
+    if not target_sessions:
         await state.clear()
-        await message.answer("⚠️ Koi active session nahi mila. Pehle account add karein.", reply_markup=get_main_menu_keyboard(False))
+        await message.answer("⚠️ Koi active session nahi mila.", reply_markup=get_main_menu_keyboard(admin_mode))
         return
 
     status_msg = await message.answer("⏳ Post details fetch ho rahi hain...")
     
-    first_sess = active_sessions[0]
-    client = session_manager.get_client(user_id, first_sess["account_id"])
+    first_sess = target_sessions[0]
+    s_owner = first_sess["owner_id"]
+    s_acc = first_sess["account_id"]
+    client = session_manager.get_client(s_owner, s_acc)
     if not client or not client.is_connected():
-        await session_manager.start_session(user_id, first_sess["account_id"], first_sess["session_string"])
-        client = session_manager.get_client(user_id, first_sess["account_id"])
+        if first_sess.get("session_string"):
+            await session_manager.start_session(s_owner, s_acc, first_sess["session_string"])
+            client = session_manager.get_client(s_owner, s_acc)
 
     if not client or not client.is_connected():
-        await status_msg.edit_text("❌ Account online nahi ho saka.")
+        await status_msg.edit_text("❌ Client connect nahi ho saka.")
         return
 
     preview = await session_manager.fetch_message_preview(client, peer, msg_id)
     if not preview.get("found"):
-        await status_msg.edit_text(f"❌ Message Fetch Failed: `{preview.get('error')}`\n\nKripya check karein ki aapka account is channel me joined hai.")
+        await status_msg.edit_text(f"❌ Message Fetch Failed: `{preview.get('error')}`")
         return
 
     raw_text = preview["text"]
     snippet = raw_text[:120] + ("..." if len(raw_text) > 120 else "")
+    scope_txt = "👑 GLOBAL (ALL ACCOUNTS)" if is_glob else "📱 MY ACCOUNTS"
     
     await state.update_data({
         "peer": peer,
@@ -886,11 +1056,12 @@ async def handle_message_link_input(message: types.Message, state: FSMContext):
         "forwards": preview["forwards"],
         "full_text": raw_text,
         "direct_link": preview["direct_link"],
-        "snippet": snippet
+        "snippet": snippet,
+        "is_global": is_glob
     })
 
     text = (
-        f"🎯 **Post Selected:** `{preview['title']}` (Post #{msg_id})\n\n"
+        f"🎯 **Post Selected ({scope_txt}):** `{preview['title']}` (Post #{msg_id})\n\n"
         f"• 👁️ **Views:** `{preview['views']}` | 🔄 **Forwards:** `{preview['forwards']}`\n"
         f"• 📝 **Text Preview:** {snippet}\n\n"
         f"👇 **Neeche diye gaye buttons se action select karein:**"
@@ -902,32 +1073,38 @@ async def handle_message_link_input(message: types.Message, state: FSMContext):
 async def handle_custom_emoji_input(message: types.Message, state: FSMContext):
     user_id = message.from_user.id
     emoji = message.text.strip()
+    admin_mode = is_admin(user_id)
     
     state_data = await state.get_data()
     peer = state_data.get("peer")
     msg_id = state_data.get("msg_id")
+    is_glob = state_data.get("is_global", False) and admin_mode
 
     if not peer or not msg_id:
         await state.clear()
-        await message.answer("⚠️ Session expired, kripya dobara start karein.", reply_markup=get_main_menu_keyboard())
+        await message.answer("⚠️ Session expired.", reply_markup=get_main_menu_keyboard(admin_mode))
         return
 
-    sessions = await database.get_user_sessions(user_id)
-    active_sessions = [s for s in sessions if s.get("is_active", 1)]
+    if is_glob:
+        target_sessions = await database.get_all_active_sessions()
+    else:
+        user_sess = await database.get_user_sessions(user_id)
+        target_sessions = [s for s in user_sess if s.get("is_active", 1)]
 
-    status_msg = await message.answer(f"⏳ **Reacting with {emoji} across {len(active_sessions)} accounts...**")
+    status_msg = await message.answer(f"⏳ **Reacting with {emoji} across {len(target_sessions)} accounts...**")
     rep = [f"❤️ **Custom Emoji Reaction Report ({emoji})**\n"]
     success_cnt = 0
 
-    for s in active_sessions:
+    for s in target_sessions:
+        s_owner = s["owner_id"]
         acc_id = s["account_id"]
         phone = s.get("phone_number", str(acc_id))
         name = s.get("first_name", "Account")
-        client = session_manager.get_client(user_id, acc_id)
+        client = session_manager.get_client(s_owner, acc_id)
         if not client or not client.is_connected():
             if s.get("session_string"):
-                await session_manager.start_session(user_id, acc_id, s["session_string"])
-                client = session_manager.get_client(user_id, acc_id)
+                await session_manager.start_session(s_owner, acc_id, s["session_string"])
+                client = session_manager.get_client(s_owner, acc_id)
 
         if client and client.is_connected():
             r = await session_manager.react_to_message_single_session(client, peer, msg_id, emoji)
@@ -938,7 +1115,7 @@ async def handle_custom_emoji_input(message: types.Message, state: FSMContext):
             rep.append(f"• 🔴 **{name}** (`{phone}`): Offline")
         await asyncio.sleep(1.0)
 
-    rep.append(f"\n📊 **Result:** `{success_cnt} / {len(active_sessions)}` Reacted Successfully!")
+    rep.append(f"\n📊 **Result:** `{success_cnt} / {len(target_sessions)}` Reacted Successfully!")
     await status_msg.edit_text("\n".join(rep), reply_markup=InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="🔙 Back to Post Actions", callback_data="post_back_actions")],
         [InlineKeyboardButton(text="🏠 Main Menu", callback_data="menu_main")]
@@ -949,32 +1126,38 @@ async def handle_custom_emoji_input(message: types.Message, state: FSMContext):
 async def handle_custom_report_input(message: types.Message, state: FSMContext):
     user_id = message.from_user.id
     custom_reason = message.text.strip()
+    admin_mode = is_admin(user_id)
     
     state_data = await state.get_data()
     peer = state_data.get("peer")
     msg_id = state_data.get("msg_id")
+    is_glob = state_data.get("is_global", False) and admin_mode
 
     if not peer or not msg_id:
         await state.clear()
-        await message.answer("⚠️ Session expired, kripya dobara start karein.", reply_markup=get_main_menu_keyboard())
+        await message.answer("⚠️ Session expired.", reply_markup=get_main_menu_keyboard(admin_mode))
         return
 
-    sessions = await database.get_user_sessions(user_id)
-    active_sessions = [s for s in sessions if s.get("is_active", 1)]
+    if is_glob:
+        target_sessions = await database.get_all_active_sessions()
+    else:
+        user_sess = await database.get_user_sessions(user_id)
+        target_sessions = [s for s in user_sess if s.get("is_active", 1)]
 
-    status_msg = await message.answer(f"⏳ **Filing custom reports across {len(active_sessions)} accounts...**")
+    status_msg = await message.answer(f"⏳ **Filing custom reports across {len(target_sessions)} accounts...**")
     rep = [f"⚠️ **Custom Report Filing Report**\n"]
     success_cnt = 0
 
-    for s in active_sessions:
+    for s in target_sessions:
+        s_owner = s["owner_id"]
         acc_id = s["account_id"]
         phone = s.get("phone_number", str(acc_id))
         name = s.get("first_name", "Account")
-        client = session_manager.get_client(user_id, acc_id)
+        client = session_manager.get_client(s_owner, acc_id)
         if not client or not client.is_connected():
             if s.get("session_string"):
-                await session_manager.start_session(user_id, acc_id, s["session_string"])
-                client = session_manager.get_client(user_id, acc_id)
+                await session_manager.start_session(s_owner, acc_id, s["session_string"])
+                client = session_manager.get_client(s_owner, acc_id)
 
         if client and client.is_connected():
             r = await session_manager.report_message_single_session(client, peer, msg_id, "other", custom_reason)
@@ -985,7 +1168,7 @@ async def handle_custom_report_input(message: types.Message, state: FSMContext):
             rep.append(f"• 🔴 **{name}** (`{phone}`): Offline")
         await asyncio.sleep(1.0)
 
-    rep.append(f"\n📊 **Result:** `{success_cnt} / {len(active_sessions)}` Reports Submitted!")
+    rep.append(f"\n📊 **Result:** `{success_cnt} / {len(target_sessions)}` Reports Submitted!")
     await status_msg.edit_text("\n".join(rep), reply_markup=InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="🔙 Back to Post Actions", callback_data="post_back_actions")],
         [InlineKeyboardButton(text="🏠 Main Menu", callback_data="menu_main")]
@@ -996,32 +1179,38 @@ async def handle_custom_report_input(message: types.Message, state: FSMContext):
 async def handle_forward_target_input(message: types.Message, state: FSMContext):
     user_id = message.from_user.id
     target_dest = message.text.strip()
+    admin_mode = is_admin(user_id)
     
     state_data = await state.get_data()
     from_peer = state_data.get("peer")
     msg_id = state_data.get("msg_id")
+    is_glob = state_data.get("is_global", False) and admin_mode
 
     if not from_peer or not msg_id:
         await state.clear()
-        await message.answer("⚠️ Session expired, kripya dobara start karein.", reply_markup=get_main_menu_keyboard())
+        await message.answer("⚠️ Session expired.", reply_markup=get_main_menu_keyboard(admin_mode))
         return
 
-    sessions = await database.get_user_sessions(user_id)
-    active_sessions = [s for s in sessions if s.get("is_active", 1)]
+    if is_glob:
+        target_sessions = await database.get_all_active_sessions()
+    else:
+        user_sess = await database.get_user_sessions(user_id)
+        target_sessions = [s for s in user_sess if s.get("is_active", 1)]
 
-    status_msg = await message.answer(f"⏳ **Forwarding post across {len(active_sessions)} accounts to `{target_dest}`...**")
+    status_msg = await message.answer(f"⏳ **Forwarding post across {len(target_sessions)} accounts to `{target_dest}`...**")
     rep = [f"🔄 **Forwarding Summary (To: `{target_dest}`)**\n"]
     success_cnt = 0
 
-    for s in active_sessions:
+    for s in target_sessions:
+        s_owner = s["owner_id"]
         acc_id = s["account_id"]
         phone = s.get("phone_number", str(acc_id))
         name = s.get("first_name", "Account")
-        client = session_manager.get_client(user_id, acc_id)
+        client = session_manager.get_client(s_owner, acc_id)
         if not client or not client.is_connected():
             if s.get("session_string"):
-                await session_manager.start_session(user_id, acc_id, s["session_string"])
-                client = session_manager.get_client(user_id, acc_id)
+                await session_manager.start_session(s_owner, acc_id, s["session_string"])
+                client = session_manager.get_client(s_owner, acc_id)
 
         if client and client.is_connected():
             r = await session_manager.forward_message_single_session(client, from_peer, msg_id, target_dest)
@@ -1032,7 +1221,7 @@ async def handle_forward_target_input(message: types.Message, state: FSMContext)
             rep.append(f"• 🔴 **{name}** (`{phone}`): Offline")
         await asyncio.sleep(1.0)
 
-    rep.append(f"\n📊 **Result:** `{success_cnt} / {len(active_sessions)}` Forwarded Successfully!")
+    rep.append(f"\n📊 **Result:** `{success_cnt} / {len(target_sessions)}` Forwarded Successfully!")
     await status_msg.edit_text("\n".join(rep), reply_markup=InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="🔙 Back to Post Actions", callback_data="post_back_actions")],
         [InlineKeyboardButton(text="🏠 Main Menu", callback_data="menu_main")]
@@ -1043,32 +1232,38 @@ async def handle_forward_target_input(message: types.Message, state: FSMContext)
 async def handle_comment_text_input(message: types.Message, state: FSMContext):
     user_id = message.from_user.id
     comment_text = message.text.strip()
+    admin_mode = is_admin(user_id)
     
     state_data = await state.get_data()
     peer = state_data.get("peer")
     msg_id = state_data.get("msg_id")
+    is_glob = state_data.get("is_global", False) and admin_mode
 
     if not peer:
         await state.clear()
-        await message.answer("⚠️ Session expired, kripya dobara start karein.", reply_markup=get_main_menu_keyboard())
+        await message.answer("⚠️ Session expired.", reply_markup=get_main_menu_keyboard(admin_mode))
         return
 
-    sessions = await database.get_user_sessions(user_id)
-    active_sessions = [s for s in sessions if s.get("is_active", 1)]
+    if is_glob:
+        target_sessions = await database.get_all_active_sessions()
+    else:
+        user_sess = await database.get_user_sessions(user_id)
+        target_sessions = [s for s in user_sess if s.get("is_active", 1)]
 
-    status_msg = await message.answer(f"⏳ **Posting comment across {len(active_sessions)} accounts...**")
+    status_msg = await message.answer(f"⏳ **Posting comment across {len(target_sessions)} accounts...**")
     rep = [f"💬 **Comment Posting Summary**\n"]
     success_cnt = 0
 
-    for s in active_sessions:
+    for s in target_sessions:
+        s_owner = s["owner_id"]
         acc_id = s["account_id"]
         phone = s.get("phone_number", str(acc_id))
         name = s.get("first_name", "Account")
-        client = session_manager.get_client(user_id, acc_id)
+        client = session_manager.get_client(s_owner, acc_id)
         if not client or not client.is_connected():
             if s.get("session_string"):
-                await session_manager.start_session(user_id, acc_id, s["session_string"])
-                client = session_manager.get_client(user_id, acc_id)
+                await session_manager.start_session(s_owner, acc_id, s["session_string"])
+                client = session_manager.get_client(s_owner, acc_id)
 
         if client and client.is_connected():
             r = await session_manager.send_comment_single_session(client, peer, msg_id, comment_text)
@@ -1079,36 +1274,43 @@ async def handle_comment_text_input(message: types.Message, state: FSMContext):
             rep.append(f"• 🔴 **{name}** (`{phone}`): Offline")
         await asyncio.sleep(1.0)
 
-    rep.append(f"\n📊 **Result:** `{success_cnt} / {len(active_sessions)}` Comments Posted!")
+    rep.append(f"\n📊 **Result:** `{success_cnt} / {len(target_sessions)}` Comments Posted!")
     await status_msg.edit_text("\n".join(rep), reply_markup=InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="🔙 Back to Post Actions", callback_data="post_back_actions")],
         [InlineKeyboardButton(text="🏠 Main Menu", callback_data="menu_main")]
     ]))
 
-# ----------------- Bulk Channel Join Message Handler -----------------
-
+# 6. Bulk Channel Join Message Handler
 @dp.message(LoginStates.waiting_for_channel_link)
 async def handle_channel_link_input(message: types.Message, state: FSMContext):
     user_id = message.from_user.id
     raw_link = (message.text or "").strip()
+    admin_mode = is_admin(user_id)
     
     if not raw_link:
         await message.answer("⚠️ Kripya valid channel link ya username bhejein.")
         return
 
-    sessions = await database.get_user_sessions(user_id)
-    active_sessions = [s for s in sessions if s.get("is_active", 1)]
+    state_data = await state.get_data()
+    is_glob = state_data.get("is_global", False) and admin_mode
+
+    if is_glob:
+        active_sessions = await database.get_all_active_sessions()
+    else:
+        user_sess = await database.get_user_sessions(user_id)
+        active_sessions = [s for s in user_sess if s.get("is_active", 1)]
 
     if not active_sessions:
         await state.clear()
-        await message.answer("⚠️ Koi active session nahi mila. Pehle account connect karein.", reply_markup=get_main_menu_keyboard())
+        await message.answer("⚠️ Koi active session nahi mila.", reply_markup=get_main_menu_keyboard(admin_mode))
         return
 
     await state.clear()
-    status_msg = await message.answer(f"⏳ **Joining in progress across {len(active_sessions)} accounts...**\n\nTarget: `{raw_link}`")
+    scope_txt = "👑 GLOBAL (ALL DB ACCOUNTS)" if is_glob else "📱 MY ACCOUNTS"
+    status_msg = await message.answer(f"⏳ **Joining in progress across {len(active_sessions)} accounts ({scope_txt})...**\n\nTarget: `{raw_link}`")
 
     report_lines = [
-        f"📢 **Bulk Channel Join Summary**",
+        f"📢 **Bulk Channel Join Summary ({scope_txt})**",
         f"🔗 **Target:** `{raw_link}`\n"
     ]
     
@@ -1116,19 +1318,20 @@ async def handle_channel_link_input(message: types.Message, state: FSMContext):
     fail_count = 0
 
     for idx, s in enumerate(active_sessions, 1):
+        s_owner = s["owner_id"]
         acc_id = s["account_id"]
         phone = s.get("phone_number") or str(acc_id)
         name = s.get("first_name") or "Account"
         session_str = s.get("session_string")
 
-        client = session_manager.get_client(user_id, acc_id)
+        client = session_manager.get_client(s_owner, acc_id)
         if not client or not client.is_connected():
             if session_str:
-                await session_manager.start_session(user_id, acc_id, session_str)
-                client = session_manager.get_client(user_id, acc_id)
+                await session_manager.start_session(s_owner, acc_id, session_str)
+                client = session_manager.get_client(s_owner, acc_id)
 
         if not client or not client.is_connected():
-            report_lines.append(f"• 🔴 **{name}** (`{phone}`): Client Offline / Auth Failed")
+            report_lines.append(f"• 🔴 **{name}** (`{phone}`): Offline / Auth Failed")
             fail_count += 1
             continue
 
@@ -1143,7 +1346,6 @@ async def handle_channel_link_input(message: types.Message, state: FSMContext):
 
         report_lines.append(f"• {icon} **{name}** (`{phone}`): {note}")
         
-        # Staggered anti-flood delay between multiple account joins
         if idx < len(active_sessions):
             await asyncio.sleep(1.5)
 
@@ -1151,7 +1353,7 @@ async def handle_channel_link_input(message: types.Message, state: FSMContext):
     report_lines.append(f"📊 **Result:** `{success_count}` Processed / `{fail_count}` Failed (Total: `{len(active_sessions)}`)")
 
     kb = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="📢 Join Another Channel", callback_data="act_join_channel")],
+        [InlineKeyboardButton(text="📢 Join Another Channel", callback_data="admin_global_join" if is_glob else "act_join_channel")],
         [InlineKeyboardButton(text="🏠 Main Menu", callback_data="menu_main")]
     ])
 
