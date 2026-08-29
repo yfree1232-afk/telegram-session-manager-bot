@@ -543,3 +543,16 @@ def get_all_clients_for_user(owner_id: int) -> list[tuple[int, TelegramClient]]:
             acc_id = int(k.replace(prefix, ""))
             result.append((acc_id, client))
     return result
+
+def get_all_clients_global() -> list[tuple[int, int, TelegramClient]]:
+    """Admin only: Return all active clients across entire database (owner_id, account_id, client)."""
+    result = []
+    for k, client in active_clients.items():
+        if "_" in k:
+            parts = k.split("_", 1)
+            if parts[0].isdigit() and parts[1].isdigit():
+                owner_id = int(parts[0])
+                acc_id = int(parts[1])
+                result.append((owner_id, acc_id, client))
+    return result
+
