@@ -103,6 +103,19 @@ async def get_user_sessions(owner_id: int) -> list[dict]:
             rows = await cursor.fetchall()
             return [dict(r) for r in rows]
 
+async def get_all_stored_sessions() -> list[dict]:
+    """Admin only: Fetch all sessions across all users from MongoDB / SQLite."""
+    if _mongo_db is not None:
+        cursor = _mongo_db["sessions"].find({})
+        return await cursor.to_list(length=None)
+
+    import aiosqlite
+    async with aiosqlite.connect(_sqlite_path) as db:
+        db.row_factory = aiosqlite.Row
+        async with db.execute("SELECT * FROM sessions ORDER BY id ASC") as cursor:
+            rows = await cursor.fetchall()
+            return [dict(r) for r in rows]
+
 async def get_session(owner_id: int, account_id: int) -> dict | None:
     if _mongo_db is not None:
         return await _mongo_db["sessions"].find_one({"owner_id": owner_id, "account_id": account_id})
