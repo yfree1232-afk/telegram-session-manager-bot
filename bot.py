@@ -47,6 +47,26 @@ class LoginStates(StatesGroup):
     waiting_for_custom_emoji = State()
     waiting_for_custom_report = State()
     waiting_for_zip_file = State()
+    waiting_for_custom_join_count = State()
+    waiting_for_custom_report_mult = State()
+    waiting_for_custom_react_count = State()
+
+def build_multiplier_keyboard(prefix: str, back_cb: str = "post_back_actions") -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(text="⚡ 1x", callback_data=f"{prefix}_1", style="primary"),
+            InlineKeyboardButton(text="🔥 3x", callback_data=f"{prefix}_3", style="primary"),
+            InlineKeyboardButton(text="🚀 5x", callback_data=f"{prefix}_5", style="success")
+        ],
+        [
+            InlineKeyboardButton(text="💥 10x", callback_data=f"{prefix}_10", style="danger"),
+            InlineKeyboardButton(text="👑 Max (All)", callback_data=f"{prefix}_max", style="danger"),
+            InlineKeyboardButton(text="✍️ Custom", callback_data=f"{prefix}_custom")
+        ],
+        [
+            InlineKeyboardButton(text="🔙 Back", callback_data=back_cb)
+        ]
+    ])
 
 def is_admin(user_id: int) -> bool:
     return user_id in ADMIN_IDS
@@ -674,26 +694,100 @@ async def callback_router(query: types.CallbackQuery, state: FSMContext):
                 except TelegramBadRequest:
                     pass
             else:
-                # Final Level: Ask to Submit Report
+                # Final Level: Multiplier Selection Menu for Reports
                 await state.update_data({"selected_report_hex": opt_hex})
-                buttons = [
-                    [InlineKeyboardButton(text=f"🚀 Submit Official Report ({len(target_sessions)} Accounts)", callback_data=f"repdo_{opt_hex}", style="danger")],
-                    [InlineKeyboardButton(text="📝 Add Custom Comment & Submit", callback_data="post_custom_report")],
-                    [InlineKeyboardButton(text="🔙 Change Reason", callback_data="post_menu_report")]
-                ]
                 text = (
-                    f"⚠️ **Confirm Official Telegram Report**\n\n"
+                    f"⚠️ **Select Report Multiplier Volume (Post #{msg_id})**\n\n"
                     f"• 🎯 **Target Post:** #{msg_id}\n"
                     f"• 👥 **Executing Accounts:** `{len(target_sessions)}` Active Accounts\n\n"
-                    f"Kya aap is report ko Telegram moderation team ko dispatch karna chahte hain?"
+                    f"👉 Kitni baar har account se official report submit karni hai? Multiplier select karein:"
                 )
                 try:
-                    await query.message.edit_text(text, reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons))
+                    await query.message.edit_text(text, reply_markup=build_multiplier_keyboard(f"multrep_{opt_hex}", "post_menu_report"))
                 except TelegramBadRequest:
                     pass
             await query.answer()
 
-        # Step 3: Execute Official Report across all sessions
+        # Step 3: Handle Report Multiplier Execution
+        elif data.startswith("multrep_"):
+            parts = data.split("_")
+            # format: multrep_<opt_hex>_<count>
+            opt_hex = parts[1]
+            mult_choice = parts[2]
+
+            state_data = await state.get_data()
+            peer = state_data.get("peer")
+            msg_id = state_data.get("msg_id")
+            is_glob = state_data.get("is_global", False) and admin_mode
+
+            if not peer or not msg_id:
+                await query.answer("Post selection expired!", show_alert=True)
+                return
+
+            if mult_choice == "custom":
+                await state.set_state(LoginStates.waiting_for_custom_report_mult)
+                await state.update_data({"selected_report_hex": opt_hex})
+                await query.message.answer(
+                    "✍️ **Custom Report Repeat Count Bhejein:**\n\nHar account se kitni baar report bhejni hai number enter karein (e.g. `5`, `10`, `25`):",
+                    reply_markup=InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="❌ Cancel", callback_data="post_back_actions")]])
+                )
+                await query.answer()
+                return
+
+            repeat_count = 1
+            if mult_choice == "max":
+                repeat_count = 10
+            elif mult_choice.isdigit():
+                repeat_count = int(mult_choice)
+
+            if is_glob:
+                target_sessions = await database.get_all_active_sessions()
+            else:
+                user_sess = await database.get_user_sessions(user_id)
+                target_sessions = [s for s in user_sess if s.get("is_active", 1)]
+
+            status_msg = await query.message.answer(f"⏳ **Filing {repeat_count}x official moderation reports across {len(target_sessions)} accounts...**")
+            rep = [f"🛡️ **Official Moderation Report Dispatch ({repeat_count}x Multiplier)**\n"]
+            success_cnt = 0
+            opt_bytes = bytes.fromhex(opt_hex) if opt_hex else b""
+
+            for loop_idx in range(repeat_count):
+                for s in target_sessions:
+                    s_owner = s["owner_id"]
+                    acc_id = s["account_id"]
+                    phone = s.get("phone_number", str(acc_id))
+                    name = s.get("first_name", "Account")
+                    client = session_manager.get_client(s_owner, acc_id)
+                    if not client or not client.is_connected():
+                        if s.get("session_string"):
+                            await session_manager.start_session(s_owner, acc_id, s["session_string"])
+                            client = session_manager.get_client(s_owner, acc_id)
+
+                    if client and client.is_connected():
+                        r = await session_manager.submit_final_report_single_session(client, peer, msg_id, opt_bytes, "Inappropriate content reported")
+                        if loop_idx == 0:
+                            rep.append(f"• {r.get('icon', '🔹')} **{name}** (`{phone}`): {r.get('note')}")
+                        if r.get("status") == "SUCCESS":
+                            success_cnt += 1
+                    else:
+                        if loop_idx == 0:
+                            rep.append(f"• 🔴 **{name}** (`{phone}`): Offline")
+                    await asyncio.sleep(0.8)
+
+            rep.append(f"\n📊 **Total Reports Delivered:** `{success_cnt} / {len(target_sessions) * repeat_count}` Reports Sent!")
+            await status_msg.edit_text("\n".join(rep), reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+                [
+                    InlineKeyboardButton(text=f"🔄 Repeat {repeat_count}x", callback_data=f"multrep_{opt_hex}_{repeat_count}", style="primary"),
+                    InlineKeyboardButton(text="🔥 Repeat 5x", callback_data=f"multrep_{opt_hex}_5", style="success")
+                ],
+                [
+                    InlineKeyboardButton(text="🎯 Post Actions Menu", callback_data="post_back_actions", style="primary"),
+                    InlineKeyboardButton(text="🏠 Main Menu", callback_data="menu_main")
+                ]
+            ]))
+            await query.answer()
+
+        # Step 3 (Legacy): Execute Official Report across all sessions
         elif data.startswith("repdo_"):
             opt_hex = data.replace("repdo_", "")
             state_data = await state.get_data()
@@ -741,6 +835,91 @@ async def callback_router(query: types.CallbackQuery, state: FSMContext):
                 [InlineKeyboardButton(text="🔙 Back to Post Actions", callback_data="post_back_actions")],
                 [InlineKeyboardButton(text="🏠 Main Menu", callback_data="menu_main")]
             ]))
+            await query.answer()
+
+        # Channel Join Multiplier Selection
+        elif data.startswith("multjoin_"):
+            choice = data.replace("multjoin_", "")
+            state_data = await state.get_data()
+            raw_link = state_data.get("channel_link")
+            is_glob = state_data.get("is_global", False) and admin_mode
+
+            if not raw_link:
+                await query.answer("Channel link session expired! Kripya dobara link bhejein.", show_alert=True)
+                return
+
+            if choice == "custom":
+                await state.set_state(LoginStates.waiting_for_custom_join_count)
+                await query.message.answer(
+                    "✍️ **Custom Account Count Bhejein:**\n\nKitne accounts se join karwana chahte hain number enter karein (e.g. `2`, `5`, `20`):",
+                    reply_markup=InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="❌ Cancel", callback_data="menu_main")]])
+                )
+                await query.answer()
+                return
+
+            if is_glob:
+                active_sessions = await database.get_all_active_sessions()
+            else:
+                user_sess = await database.get_user_sessions(user_id)
+                active_sessions = [s for s in user_sess if s.get("is_active", 1)]
+
+            if choice != "max" and choice.isdigit():
+                limit = int(choice)
+                active_sessions = active_sessions[:limit]
+
+            await state.clear()
+            scope_txt = "👑 GLOBAL (ALL DB ACCOUNTS)" if is_glob else "📱 MY ACCOUNTS"
+            status_msg = await query.message.answer(f"⏳ **Joining in progress across {len(active_sessions)} accounts ({scope_txt})...**\n\nTarget: `{raw_link}`")
+
+            report_lines = [
+                f"📢 **Bulk Channel Join Summary ({scope_txt})**",
+                f"🔗 **Target:** `{raw_link}`\n"
+            ]
+            
+            success_count = 0
+            fail_count = 0
+
+            for idx, s in enumerate(active_sessions, 1):
+                s_owner = s["owner_id"]
+                acc_id = s["account_id"]
+                phone = s.get("phone_number") or str(acc_id)
+                name = s.get("first_name") or "Account"
+                session_str = s.get("session_string")
+
+                client = session_manager.get_client(s_owner, acc_id)
+                if not client or not client.is_connected():
+                    if session_str:
+                        await session_manager.start_session(s_owner, acc_id, session_str)
+                        client = session_manager.get_client(s_owner, acc_id)
+
+                if not client or not client.is_connected():
+                    report_lines.append(f"• 🔴 **{name}** (`{phone}`): Offline / Auth Failed")
+                    fail_count += 1
+                    continue
+
+                res = await session_manager.join_channel_single_session(client, raw_link)
+                icon = res.get("icon", "🔹")
+                note = res.get("note", "")
+                
+                if res.get("status") in ("SUCCESS", "ALREADY_MEMBER", "REQUEST_SENT"):
+                    success_count += 1
+                else:
+                    fail_count += 1
+
+                report_lines.append(f"• {icon} **{name}** (`{phone}`): {note}")
+                
+                if idx < len(active_sessions):
+                    await asyncio.sleep(1.2)
+
+            report_lines.append(f"\n━━━━━━━━━━━━━━━━━━━")
+            report_lines.append(f"📊 **Result:** `{success_count}` Processed / `{fail_count}` Failed (Total: `{len(active_sessions)}`)")
+
+            kb = InlineKeyboardMarkup(inline_keyboard=[
+                [InlineKeyboardButton(text="📢 Join Another Channel", callback_data="admin_global_join" if is_glob else "act_join_channel")],
+                [InlineKeyboardButton(text="🏠 Main Menu", callback_data="menu_main")]
+            ])
+
+            await status_msg.edit_text("\n".join(report_lines), reply_markup=kb)
             await query.answer()
 
         # Legacy direct report fallback
@@ -1335,6 +1514,76 @@ async def handle_custom_report_input(message: types.Message, state: FSMContext):
         [InlineKeyboardButton(text="🏠 Main Menu", callback_data="menu_main")]
     ]))
 
+# 3.1 Custom Report Multiplier Count Input
+@dp.message(LoginStates.waiting_for_custom_report_mult)
+async def handle_custom_report_mult_input(message: types.Message, state: FSMContext):
+    user_id = message.from_user.id
+    admin_mode = is_admin(user_id)
+    text = (message.text or "").strip()
+    
+    if not text.isdigit() or int(text) <= 0:
+        await message.answer("⚠️ Kripya valid positive number enter karein (e.g. `5`, `10`, `20`):")
+        return
+        
+    repeat_count = min(int(text), 100)
+    state_data = await state.get_data()
+    peer = state_data.get("peer")
+    msg_id = state_data.get("msg_id")
+    opt_hex = state_data.get("selected_report_hex", "")
+    is_glob = state_data.get("is_global", False) and admin_mode
+    
+    if not peer or not msg_id:
+        await state.clear()
+        await message.answer("⚠️ Session expired.", reply_markup=get_main_menu_keyboard(admin_mode))
+        return
+        
+    if is_glob:
+        target_sessions = await database.get_all_active_sessions()
+    else:
+        user_sess = await database.get_user_sessions(user_id)
+        target_sessions = [s for s in user_sess if s.get("is_active", 1)]
+        
+    await state.clear()
+    status_msg = await message.answer(f"⏳ **Filing {repeat_count}x official reports across {len(target_sessions)} accounts...**")
+    rep = [f"🛡️ **Official Moderation Report Dispatch ({repeat_count}x Custom Multiplier)**\n"]
+    success_cnt = 0
+    opt_bytes = bytes.fromhex(opt_hex) if opt_hex else b""
+    
+    for loop_idx in range(repeat_count):
+        for s in target_sessions:
+            s_owner = s["owner_id"]
+            acc_id = s["account_id"]
+            phone = s.get("phone_number", str(acc_id))
+            name = s.get("first_name", "Account")
+            client = session_manager.get_client(s_owner, acc_id)
+            if not client or not client.is_connected():
+                if s.get("session_string"):
+                    await session_manager.start_session(s_owner, acc_id, s["session_string"])
+                    client = session_manager.get_client(s_owner, acc_id)
+
+            if client and client.is_connected():
+                r = await session_manager.submit_final_report_single_session(client, peer, msg_id, opt_bytes, "Inappropriate content reported")
+                if loop_idx == 0:
+                    rep.append(f"• {r.get('icon', '🔹')} **{name}** (`{phone}`): {r.get('note')}")
+                if r.get("status") == "SUCCESS":
+                    success_cnt += 1
+            else:
+                if loop_idx == 0:
+                    rep.append(f"• 🔴 **{name}** (`{phone}`): Offline")
+            await asyncio.sleep(0.8)
+
+    rep.append(f"\n📊 **Total Reports Delivered:** `{success_cnt} / {len(target_sessions) * repeat_count}` Reports Sent!")
+    await status_msg.edit_text("\n".join(rep), reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(text=f"🔄 Repeat {repeat_count}x", callback_data=f"multrep_{opt_hex}_{repeat_count}", style="primary"),
+            InlineKeyboardButton(text="🔥 Repeat 5x", callback_data=f"multrep_{opt_hex}_5", style="success")
+        ],
+        [
+            InlineKeyboardButton(text="🎯 Post Actions Menu", callback_data="post_back_actions", style="primary"),
+            InlineKeyboardButton(text="🏠 Main Menu", callback_data="menu_main")
+        ]
+    ]))
+
 # 4. Forward Target Input
 @dp.message(LoginStates.waiting_for_forward_target)
 async def handle_forward_target_input(message: types.Message, state: FSMContext):
@@ -1466,6 +1715,43 @@ async def handle_channel_link_input(message: types.Message, state: FSMContext):
         await message.answer("⚠️ Koi active session nahi mila.", reply_markup=get_main_menu_keyboard(admin_mode))
         return
 
+    await state.update_data({"channel_link": raw_link})
+    scope_txt = "👑 GLOBAL (ALL DB ACCOUNTS)" if is_glob else "📱 MY ACCOUNTS"
+    text = (
+        f"📢 **Join Channel Multiplier Selection ({scope_txt})**\n\n"
+        f"• 🔗 **Channel:** `{raw_link}`\n"
+        f"• 👥 **Available Accounts:** `{len(active_sessions)}`\n\n"
+        f"👉 Kitne accounts se join karwana chahte hain? Multiplier select karein:"
+    )
+    await message.answer(text, reply_markup=build_multiplier_keyboard("multjoin", "menu_main"))
+
+@dp.message(LoginStates.waiting_for_custom_join_count)
+async def handle_custom_join_count_input(message: types.Message, state: FSMContext):
+    user_id = message.from_user.id
+    admin_mode = is_admin(user_id)
+    text = (message.text or "").strip()
+
+    if not text.isdigit() or int(text) <= 0:
+        await message.answer("⚠️ Kripya valid positive number enter karein (e.g. `2`, `5`, `10`):")
+        return
+
+    limit = int(text)
+    state_data = await state.get_data()
+    raw_link = state_data.get("channel_link")
+    is_glob = state_data.get("is_global", False) and admin_mode
+
+    if not raw_link:
+        await state.clear()
+        await message.answer("⚠️ Session expired.", reply_markup=get_main_menu_keyboard(admin_mode))
+        return
+
+    if is_glob:
+        active_sessions = await database.get_all_active_sessions()
+    else:
+        user_sess = await database.get_user_sessions(user_id)
+        active_sessions = [s for s in user_sess if s.get("is_active", 1)]
+
+    active_sessions = active_sessions[:limit]
     await state.clear()
     scope_txt = "👑 GLOBAL (ALL DB ACCOUNTS)" if is_glob else "📱 MY ACCOUNTS"
     status_msg = await message.answer(f"⏳ **Joining in progress across {len(active_sessions)} accounts ({scope_txt})...**\n\nTarget: `{raw_link}`")
@@ -1508,7 +1794,7 @@ async def handle_channel_link_input(message: types.Message, state: FSMContext):
         report_lines.append(f"• {icon} **{name}** (`{phone}`): {note}")
         
         if idx < len(active_sessions):
-            await asyncio.sleep(1.5)
+            await asyncio.sleep(1.2)
 
     report_lines.append(f"\n━━━━━━━━━━━━━━━━━━━")
     report_lines.append(f"📊 **Result:** `{success_count}` Processed / `{fail_count}` Failed (Total: `{len(active_sessions)}`)")
