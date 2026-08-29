@@ -55,16 +55,16 @@ def get_main_menu_keyboard(is_user_admin: bool = False) -> InlineKeyboardMarkup:
     if is_user_admin:
         buttons = [
             [
-                InlineKeyboardButton(text="📢 Global Channel Join (ALL DB Accs 🚀)", callback_data="admin_global_join"),
-                InlineKeyboardButton(text="🎯 Global Post Multi-Tool 🔥", callback_data="admin_global_post")
+                InlineKeyboardButton(text="📢 Global Channel Join (ALL DB Accs 🚀)", callback_data="admin_global_join", style="success"),
+                InlineKeyboardButton(text="🎯 Global Post Multi-Tool 🔥", callback_data="admin_global_post", style="primary")
             ],
             [
-                InlineKeyboardButton(text="👑 Global Sessions Hub (All Users)", callback_data="admin_global_hub"),
-                InlineKeyboardButton(text="🔍 Global Health Check All", callback_data="admin_global_health")
+                InlineKeyboardButton(text="👑 Global Sessions Hub (All Users)", callback_data="admin_global_hub", style="primary"),
+                InlineKeyboardButton(text="🔍 Global Health Check All", callback_data="admin_global_health", style="primary")
             ],
             [
-                InlineKeyboardButton(text="📦 Batch Import (ZIP / Files 📁)", callback_data="act_import_zip"),
-                InlineKeyboardButton(text="➕ Add New Session", callback_data="menu_add_session")
+                InlineKeyboardButton(text="📦 Batch Import (ZIP / Files 📁)", callback_data="act_import_zip", style="success"),
+                InlineKeyboardButton(text="➕ Add New Session", callback_data="menu_add_session", style="success")
             ],
             [
                 InlineKeyboardButton(text="📱 My Personal Sessions", callback_data="hub_sessions"),
@@ -77,16 +77,16 @@ def get_main_menu_keyboard(is_user_admin: bool = False) -> InlineKeyboardMarkup:
     else:
         buttons = [
             [
-                InlineKeyboardButton(text="📢 Join Channel (My Accounts 🚀)", callback_data="act_join_channel"),
-                InlineKeyboardButton(text="🎯 Post Multi-Tool (My Accounts ⚡)", callback_data="act_post_toolkit")
+                InlineKeyboardButton(text="📢 Join Channel (My Accounts 🚀)", callback_data="act_join_channel", style="success"),
+                InlineKeyboardButton(text="🎯 Post Multi-Tool (My Accounts ⚡)", callback_data="act_post_toolkit", style="primary")
             ],
             [
-                InlineKeyboardButton(text="📦 Batch Import (ZIP / Files 📁)", callback_data="act_import_zip"),
-                InlineKeyboardButton(text="➕ Add Single Session", callback_data="menu_add_session")
+                InlineKeyboardButton(text="📦 Batch Import (ZIP / Files 📁)", callback_data="act_import_zip", style="success"),
+                InlineKeyboardButton(text="➕ Add Single Session", callback_data="menu_add_session", style="success")
             ],
             [
                 InlineKeyboardButton(text="📱 My Connected Sessions", callback_data="hub_sessions"),
-                InlineKeyboardButton(text="🔍 Health Check (My Accounts)", callback_data="act_health_all")
+                InlineKeyboardButton(text="🔍 Health Check (My Accounts)", callback_data="act_health_all", style="primary")
             ],
             [
                 InlineKeyboardButton(text="📊 Database Stats", callback_data="hub_stats"),
@@ -97,9 +97,9 @@ def get_main_menu_keyboard(is_user_admin: bool = False) -> InlineKeyboardMarkup:
 
 def get_add_session_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="📱 Phone Number (OTP Login)", callback_data="add_phone_otp")],
-        [InlineKeyboardButton(text="🔑 Paste String Session (1-Click)", callback_data="add_string_session")],
-        [InlineKeyboardButton(text="📦 Upload ZIP / .Session Files", callback_data="act_import_zip")],
+        [InlineKeyboardButton(text="📱 Phone Number (OTP Login)", callback_data="add_phone_otp", style="primary")],
+        [InlineKeyboardButton(text="🔑 Paste String Session (1-Click)", callback_data="add_string_session", style="success")],
+        [InlineKeyboardButton(text="📦 Upload ZIP / .Session Files", callback_data="act_import_zip", style="success")],
         [InlineKeyboardButton(text="🔙 Back to Main Menu", callback_data="menu_main")]
     ])
 
@@ -110,8 +110,8 @@ def build_sessions_list_keyboard(sessions: list[dict], is_global_view: bool = Fa
     else:
         if not is_global_view:
             buttons.append([
-                InlineKeyboardButton(text="📢 Join Channel", callback_data="act_join_channel"),
-                InlineKeyboardButton(text="🎯 Post Multi-Tool", callback_data="act_post_toolkit")
+                InlineKeyboardButton(text="📢 Join Channel", callback_data="act_join_channel", style="success"),
+                InlineKeyboardButton(text="🎯 Post Multi-Tool", callback_data="act_post_toolkit", style="primary")
             ])
         for s in sessions[:60]:
             acc_id = s["account_id"]
@@ -120,35 +120,39 @@ def build_sessions_list_keyboard(sessions: list[dict], is_global_view: bool = Fa
             name = s.get("first_name") or "Account"
             is_active = bool(s.get("is_active", 1))
             status_icon = "🟢" if is_active else "🔴"
+            btn_style = "success" if is_active else "danger"
             if is_global_view:
                 btn_text = f"{status_icon} {name} ({phone}) [U:{owner}]"
             else:
                 btn_text = f"{status_icon} {name} ({phone})"
-            buttons.append([InlineKeyboardButton(text=btn_text, callback_data=f"view_sess_{owner}_{acc_id}" if is_global_view else f"view_sess_{acc_id}")])
+            buttons.append([InlineKeyboardButton(text=btn_text, callback_data=f"view_sess_{owner}_{acc_id}" if is_global_view else f"view_sess_{acc_id}", style=btn_style)])
 
     if not is_global_view:
         buttons.append([
-            InlineKeyboardButton(text="➕ Add Account", callback_data="menu_add_session"),
-            InlineKeyboardButton(text="📦 Import ZIP", callback_data="act_import_zip"),
+            InlineKeyboardButton(text="➕ Add Account", callback_data="menu_add_session", style="primary"),
+            InlineKeyboardButton(text="📦 Import ZIP", callback_data="act_import_zip", style="success"),
             InlineKeyboardButton(text="🔄 Refresh", callback_data="hub_sessions")
         ])
     else:
         buttons.append([
-            InlineKeyboardButton(text="🔄 Refresh Global Pool", callback_data="admin_global_hub")
+            InlineKeyboardButton(text="🔄 Refresh Global Pool", callback_data="admin_global_hub", style="primary")
         ])
-    buttons.append([InlineKeyboardButton(text="🔙 Back to Main Menu", callback_data="menu_main")])
+    buttons.append([InlineKeyboardButton(text="🔙 Back to Main Menu", callback_data="menu_main")] )
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 def build_single_session_keyboard(session: dict) -> InlineKeyboardMarkup:
+    owner_id = session.get("owner_id")
     acc_id = session["account_id"]
     is_active = bool(session.get("is_active", 1))
     toggle_text = "⏸️ Deactivate / Pause" if is_active else "▶️ Activate Session"
+    toggle_style = "danger" if is_active else "success"
     
+    cb_suffix = f"{owner_id}_{acc_id}" if owner_id else str(acc_id)
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text=toggle_text, callback_data=f"tog_sess_{acc_id}")],
+        [InlineKeyboardButton(text=toggle_text, callback_data=f"tog_sess_{cb_suffix}", style=toggle_style)],
         [
-            InlineKeyboardButton(text="🔍 Test Health", callback_data=f"chk_sess_{acc_id}"),
-            InlineKeyboardButton(text="🗑️ Delete Account", callback_data=f"del_sess_{acc_id}")
+            InlineKeyboardButton(text="🔍 Test Health", callback_data=f"chk_sess_{cb_suffix}", style="primary"),
+            InlineKeyboardButton(text="🗑️ Delete Account", callback_data=f"del_sess_{cb_suffix}", style="danger")
         ],
         [InlineKeyboardButton(text="🔙 Back to Sessions List", callback_data="hub_sessions")]
     ])
@@ -156,15 +160,15 @@ def build_single_session_keyboard(session: dict) -> InlineKeyboardMarkup:
 def build_post_actions_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
         [
-            InlineKeyboardButton(text="❤️ React with Emojis", callback_data="post_menu_react"),
-            InlineKeyboardButton(text="🔄 Forward Post", callback_data="post_menu_forward")
+            InlineKeyboardButton(text="❤️ React with Emojis", callback_data="post_menu_react", style="primary"),
+            InlineKeyboardButton(text="🔄 Forward Post", callback_data="post_menu_forward", style="primary")
         ],
         [
-            InlineKeyboardButton(text="⚠️ Report Post", callback_data="post_menu_report"),
+            InlineKeyboardButton(text="⚠️ Report Post", callback_data="post_menu_report", style="danger"),
             InlineKeyboardButton(text="📋 Copy Text & Link", callback_data="post_menu_copy")
         ],
         [
-            InlineKeyboardButton(text="💬 Post Comment / Reply", callback_data="post_menu_comment")
+            InlineKeyboardButton(text="💬 Post Comment / Reply", callback_data="post_menu_comment", style="success")
         ],
         [
             InlineKeyboardButton(text="🔄 Select Another Post", callback_data="act_post_toolkit"),
@@ -175,25 +179,25 @@ def build_post_actions_keyboard() -> InlineKeyboardMarkup:
 def build_reactions_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
         [
-            InlineKeyboardButton(text="👍", callback_data="react_👍"),
-            InlineKeyboardButton(text="❤️", callback_data="react_❤️"),
-            InlineKeyboardButton(text="🔥", callback_data="react_🔥"),
-            InlineKeyboardButton(text="👏", callback_data="react_👏")
+            InlineKeyboardButton(text="👍", callback_data="react_👍", style="success"),
+            InlineKeyboardButton(text="❤️", callback_data="react_❤️", style="danger"),
+            InlineKeyboardButton(text="🔥", callback_data="react_🔥", style="primary"),
+            InlineKeyboardButton(text="👏", callback_data="react_👏", style="success")
         ],
         [
-            InlineKeyboardButton(text="🎉", callback_data="react_🎉"),
-            InlineKeyboardButton(text="🤩", callback_data="react_🤩"),
-            InlineKeyboardButton(text="🚀", callback_data="react_🚀"),
-            InlineKeyboardButton(text="😍", callback_data="react_😍")
+            InlineKeyboardButton(text="🎉", callback_data="react_🎉", style="primary"),
+            InlineKeyboardButton(text="🤩", callback_data="react_🤩", style="primary"),
+            InlineKeyboardButton(text="🚀", callback_data="react_🚀", style="success"),
+            InlineKeyboardButton(text="😍", callback_data="react_😍", style="danger")
         ],
         [
             InlineKeyboardButton(text="😱", callback_data="react_😱"),
-            InlineKeyboardButton(text="😂", callback_data="react_😂"),
-            InlineKeyboardButton(text="👎", callback_data="react_👎"),
+            InlineKeyboardButton(text="😂", callback_data="react_😂", style="primary"),
+            InlineKeyboardButton(text="👎", callback_data="react_👎", style="danger"),
             InlineKeyboardButton(text="💩", callback_data="react_💩")
         ],
         [
-            InlineKeyboardButton(text="✍️ Custom Emoji Input", callback_data="post_custom_react")
+            InlineKeyboardButton(text="✍️ Custom Emoji Input", callback_data="post_custom_react", style="primary")
         ],
         [
             InlineKeyboardButton(text="🔙 Back to Post Actions", callback_data="post_back_actions")
@@ -203,16 +207,16 @@ def build_reactions_keyboard() -> InlineKeyboardMarkup:
 def build_report_reasons_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
         [
-            InlineKeyboardButton(text="🚫 Spam", callback_data="rep_spam"),
-            InlineKeyboardButton(text="🎭 Fake / Scam", callback_data="rep_fake")
+            InlineKeyboardButton(text="🚫 Spam", callback_data="rep_spam", style="danger"),
+            InlineKeyboardButton(text="🎭 Fake / Scam", callback_data="rep_fake", style="danger")
         ],
         [
-            InlineKeyboardButton(text="🔞 Pornography", callback_data="rep_pornography"),
-            InlineKeyboardButton(text="🩸 Violence", callback_data="rep_violence")
+            InlineKeyboardButton(text="🔞 Pornography", callback_data="rep_pornography", style="danger"),
+            InlineKeyboardButton(text="🩸 Violence", callback_data="rep_violence", style="danger")
         ],
         [
-            InlineKeyboardButton(text="⚠️ Copyright", callback_data="rep_copyright"),
-            InlineKeyboardButton(text="🔞 Child Abuse", callback_data="rep_child_abuse")
+            InlineKeyboardButton(text="⚠️ Copyright", callback_data="rep_copyright", style="danger"),
+            InlineKeyboardButton(text="🔞 Child Abuse", callback_data="rep_child_abuse", style="danger")
         ],
         [
             InlineKeyboardButton(text="📝 Other (Custom Reason)", callback_data="post_custom_report")
