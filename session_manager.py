@@ -342,29 +342,40 @@ async def report_message_single_session(client: TelegramClient, peer, msg_id: in
         except Exception as e:
             return {"status": "ERROR", "icon": "🔴", "note": f"Connect Failed: {e}"}
 
-    reason_map = {
-        "spam": types.InputReportReasonSpam(),
-        "fake": types.InputReportReasonFake(),
-        "violence": types.InputReportReasonViolence(),
-        "pornography": types.InputReportReasonPornography(),
-        "child_abuse": types.InputReportReasonChildAbuse(),
-        "copyright": types.InputReportReasonCopyright(),
-        "other": types.InputReportReasonOther()
-    }
-    reason_obj = reason_map.get(reason_key.lower(), types.InputReportReasonSpam())
-
     try:
         entity = await client.get_entity(peer)
-        await client(functions.messages.ReportRequest(
-            peer=entity,
-            id=[msg_id],
-            reason=reason_obj,
-            message=comment
-        ))
-        return {"status": "SUCCESS", "icon": "🟢", "note": f"Reported ({reason_key.upper()}) ✅"}
+        option_bytes = reason_key.lower().encode("utf-8")
+        
+        try:
+            await client(functions.messages.ReportRequest(
+                peer=entity,
+                id=[msg_id],
+                option=option_bytes,
+                message=comment or "Inappropriate content"
+            ))
+            return {"status": "SUCCESS", "icon": "🟢", "note": f"Reported ({reason_key.upper()}) ✅"}
+        except Exception as me:
+            logger.debug(f"messages.ReportRequest note: {me}, trying fallback...")
+            reason_map = {
+                "spam": types.InputReportReasonSpam(),
+                "fake": types.InputReportReasonFake(),
+                "violence": types.InputReportReasonViolence(),
+                "pornography": types.InputReportReasonPornography(),
+                "child_abuse": types.InputReportReasonChildAbuse(),
+                "copyright": types.InputReportReasonCopyright(),
+                "other": types.InputReportReasonOther()
+            }
+            reason_obj = reason_map.get(reason_key.lower(), types.InputReportReasonSpam())
+            await client(functions.account.ReportPeerRequest(
+                peer=entity,
+                reason=reason_obj,
+                message=f"Post #{msg_id}: {comment}"
+            ))
+            return {"status": "SUCCESS", "icon": "🟢", "note": f"Reported ({reason_key.upper()}) ✅"}
     except FloodWaitError as fe:
         return {"status": "FLOOD_WAIT", "icon": "⏳", "note": f"FloodWait ({fe.seconds}s) ⚠️"}
     except Exception as e:
+        logger.error(f"Error reporting message {msg_id}: {e}")
         return {"status": "ERROR", "icon": "🔴", "note": f"Failed: {str(e)[:30]}"}
 
 async def send_comment_single_session(client: TelegramClient, peer, msg_id: int | None, text_content: str) -> dict:
