@@ -574,23 +574,176 @@ async def callback_router(query: types.CallbackQuery, state: FSMContext):
             )
             await query.answer()
 
-        # Post Action 3: Report Menu
+        # Post Action 3: Multi-Level Dynamic Report Menu
         elif data == "post_menu_report":
             state_data = await state.get_data()
             title = state_data.get("title", "Target Post")
+            peer = state_data.get("peer")
             msg_id = state_data.get("msg_id")
-            text = (
-                f"⚠️ **Report Post #{msg_id} (`{title}`)**\n\n"
-                f"Telegram moderation ko report submit karne ke liye reason select karein:\n"
-                f"*(Sabhi active sessions se official report bhej di jayegi)*"
-            )
-            try:
-                await query.message.edit_text(text, reply_markup=build_report_reasons_keyboard())
-            except TelegramBadRequest:
-                pass
+            is_glob = state_data.get("is_global", False) and admin_mode
+
+            if not peer or not msg_id:
+                await query.answer("Post selection expired!", show_alert=True)
+                return
+
+            if is_glob:
+                target_sessions = await database.get_all_active_sessions()
+            else:
+                user_sess = await database.get_user_sessions(user_id)
+                target_sessions = [s for s in user_sess if s.get("is_active", 1)]
+
+            if not target_sessions:
+                await query.answer("⚠️ Koi active session nahi mila!", show_alert=True)
+                return
+
+            first_sess = target_sessions[0]
+            client = session_manager.get_client(first_sess["owner_id"], first_sess["account_id"])
+            if not client or not client.is_connected():
+                if first_sess.get("session_string"):
+                    await session_manager.start_session(first_sess["owner_id"], first_sess["account_id"], first_sess["session_string"])
+                    client = session_manager.get_client(first_sess["owner_id"], first_sess["account_id"])
+
+            if not client or not client.is_connected():
+                await query.answer("❌ Session connect nahi ho saki!", show_alert=True)
+                return
+
+            res = await session_manager.fetch_report_options(client, peer, msg_id, b"")
+            if res.get("type") == "choose_option" and res.get("options"):
+                buttons = []
+                for opt in res["options"]:
+                    buttons.append([InlineKeyboardButton(text=f"⚠️ {opt['text']}", callback_data=f"repopt_{opt['option_hex']}", style="danger")])
+                buttons.append([InlineKeyboardButton(text="🔙 Back to Post Actions", callback_data="post_back_actions")])
+                
+                text = (
+                    f"🛡️ **Official Telegram Report Menu (Post #{msg_id})**\n\n"
+                    f"**{res.get('title', 'What is wrong with this post?')}**\n\n"
+                    f"👇 Category select karein (Real-time MTProto moderation categories):"
+                )
+                try:
+                    await query.message.edit_text(text, reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons))
+                except TelegramBadRequest:
+                    pass
+            else:
+                try:
+                    await query.message.edit_text(f"⚠️ **Report Post #{msg_id} (`{title}`)**", reply_markup=build_report_reasons_keyboard())
+                except TelegramBadRequest:
+                    pass
             await query.answer()
 
-        # Trigger Report
+        # Step 2: Handle Sub-Category Option Selection
+        elif data.startswith("repopt_"):
+            opt_hex = data.replace("repopt_", "")
+            state_data = await state.get_data()
+            peer = state_data.get("peer")
+            msg_id = state_data.get("msg_id")
+            is_glob = state_data.get("is_global", False) and admin_mode
+
+            if not peer or not msg_id:
+                await query.answer("Post selection expired!", show_alert=True)
+                return
+
+            if is_glob:
+                target_sessions = await database.get_all_active_sessions()
+            else:
+                user_sess = await database.get_user_sessions(user_id)
+                target_sessions = [s for s in user_sess if s.get("is_active", 1)]
+
+            first_sess = target_sessions[0]
+            client = session_manager.get_client(first_sess["owner_id"], first_sess["account_id"])
+            if not client or not client.is_connected():
+                if first_sess.get("session_string"):
+                    await session_manager.start_session(first_sess["owner_id"], first_sess["account_id"], first_sess["session_string"])
+                    client = session_manager.get_client(first_sess["owner_id"], first_sess["account_id"])
+
+            res = await session_manager.fetch_report_options(client, peer, msg_id, bytes.fromhex(opt_hex))
+            
+            # If server provides deeper sub-options (e.g. under Violence -> Terrorism, Graphic, etc.)
+            if res.get("type") == "choose_option" and res.get("options"):
+                buttons = []
+                for sub_opt in res["options"]:
+                    buttons.append([InlineKeyboardButton(text=f"👉 {sub_opt['text']}", callback_data=f"repopt_{sub_opt['option_hex']}", style="danger")])
+                buttons.append([InlineKeyboardButton(text="🔙 Back to Main Categories", callback_data="post_menu_report")])
+                
+                text = (
+                    f"🛡️ **Report Sub-Category Details (Post #{msg_id})**\n\n"
+                    f"**{res.get('title', 'What is wrong with this post?')}**\n\n"
+                    f"👇 Exact reason select karein:"
+                )
+                try:
+                    await query.message.edit_text(text, reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons))
+                except TelegramBadRequest:
+                    pass
+            else:
+                # Final Level: Ask to Submit Report
+                await state.update_data({"selected_report_hex": opt_hex})
+                buttons = [
+                    [InlineKeyboardButton(text=f"🚀 Submit Official Report ({len(target_sessions)} Accounts)", callback_data=f"repdo_{opt_hex}", style="danger")],
+                    [InlineKeyboardButton(text="📝 Add Custom Comment & Submit", callback_data="post_custom_report")],
+                    [InlineKeyboardButton(text="🔙 Change Reason", callback_data="post_menu_report")]
+                ]
+                text = (
+                    f"⚠️ **Confirm Official Telegram Report**\n\n"
+                    f"• 🎯 **Target Post:** #{msg_id}\n"
+                    f"• 👥 **Executing Accounts:** `{len(target_sessions)}` Active Accounts\n\n"
+                    f"Kya aap is report ko Telegram moderation team ko dispatch karna chahte hain?"
+                )
+                try:
+                    await query.message.edit_text(text, reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons))
+                except TelegramBadRequest:
+                    pass
+            await query.answer()
+
+        # Step 3: Execute Official Report across all sessions
+        elif data.startswith("repdo_"):
+            opt_hex = data.replace("repdo_", "")
+            state_data = await state.get_data()
+            peer = state_data.get("peer")
+            msg_id = state_data.get("msg_id")
+            is_glob = state_data.get("is_global", False) and admin_mode
+
+            if not peer or not msg_id:
+                await query.answer("Post selection expired!", show_alert=True)
+                return
+
+            if is_glob:
+                target_sessions = await database.get_all_active_sessions()
+            else:
+                user_sess = await database.get_user_sessions(user_id)
+                target_sessions = [s for s in user_sess if s.get("is_active", 1)]
+
+            status_msg = await query.message.answer(f"⏳ **Filing official Telegram moderation reports across {len(target_sessions)} accounts...**")
+            rep = [f"🛡️ **Official Moderation Report Dispatch**\n"]
+            success_cnt = 0
+            opt_bytes = bytes.fromhex(opt_hex) if opt_hex else b""
+
+            for s in target_sessions:
+                s_owner = s["owner_id"]
+                acc_id = s["account_id"]
+                phone = s.get("phone_number", str(acc_id))
+                name = s.get("first_name", "Account")
+                client = session_manager.get_client(s_owner, acc_id)
+                if not client or not client.is_connected():
+                    if s.get("session_string"):
+                        await session_manager.start_session(s_owner, acc_id, s["session_string"])
+                        client = session_manager.get_client(s_owner, acc_id)
+
+                if client and client.is_connected():
+                    r = await session_manager.submit_final_report_single_session(client, peer, msg_id, opt_bytes, "Inappropriate content reported")
+                    rep.append(f"• {r.get('icon', '🔹')} **{name}** (`{phone}`): {r.get('note')}")
+                    if r.get("status") == "SUCCESS":
+                        success_cnt += 1
+                else:
+                    rep.append(f"• 🔴 **{name}** (`{phone}`): Offline")
+                await asyncio.sleep(1.0)
+
+            rep.append(f"\n📊 **Result:** `{success_cnt} / {len(target_sessions)}` Reports Submitted to Telegram!")
+            await status_msg.edit_text("\n".join(rep), reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+                [InlineKeyboardButton(text="🔙 Back to Post Actions", callback_data="post_back_actions")],
+                [InlineKeyboardButton(text="🏠 Main Menu", callback_data="menu_main")]
+            ]))
+            await query.answer()
+
+        # Legacy direct report fallback
         elif data.startswith("rep_"):
             reason_key = data.replace("rep_", "")
             state_data = await state.get_data()
@@ -611,6 +764,7 @@ async def callback_router(query: types.CallbackQuery, state: FSMContext):
             status_msg = await query.message.answer(f"⏳ **Filing {reason_key.upper()} reports across {len(target_sessions)} accounts...**")
             rep = [f"⚠️ **Report Filing Report ({reason_key.upper()})**\n"]
             success_cnt = 0
+            opt_bytes = reason_key.lower().encode("utf-8")
 
             for s in target_sessions:
                 s_owner = s["owner_id"]
@@ -624,7 +778,7 @@ async def callback_router(query: types.CallbackQuery, state: FSMContext):
                         client = session_manager.get_client(s_owner, acc_id)
 
                 if client and client.is_connected():
-                    r = await session_manager.report_message_single_session(client, peer, msg_id, reason_key, "Reported inappropriate content")
+                    r = await session_manager.submit_final_report_single_session(client, peer, msg_id, opt_bytes, "Reported inappropriate content")
                     rep.append(f"• {r.get('icon', '🔹')} **{name}** (`{phone}`): {r.get('note')}")
                     if r.get("status") == "SUCCESS":
                         success_cnt += 1
@@ -643,7 +797,7 @@ async def callback_router(query: types.CallbackQuery, state: FSMContext):
         elif data == "post_custom_report":
             await state.set_state(LoginStates.waiting_for_custom_report)
             await query.message.answer(
-                "📝 **Custom Report Reason Type Karein:**\n\nKripya apna report message / reason chat me type karke bhejein:",
+                "📝 **Custom Report Comment Type Karein:**\n\nKripya apna report description / note chat me type karke bhejein:",
                 reply_markup=InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="❌ Cancel", callback_data="post_back_actions")]])
             )
             await query.answer()
@@ -1152,6 +1306,9 @@ async def handle_custom_report_input(message: types.Message, state: FSMContext):
     rep = [f"⚠️ **Custom Report Filing Report**\n"]
     success_cnt = 0
 
+    opt_hex = state_data.get("selected_report_hex", "")
+    opt_bytes = bytes.fromhex(opt_hex) if opt_hex else b"a"
+
     for s in target_sessions:
         s_owner = s["owner_id"]
         acc_id = s["account_id"]
@@ -1164,7 +1321,7 @@ async def handle_custom_report_input(message: types.Message, state: FSMContext):
                 client = session_manager.get_client(s_owner, acc_id)
 
         if client and client.is_connected():
-            r = await session_manager.report_message_single_session(client, peer, msg_id, "other", custom_reason)
+            r = await session_manager.submit_final_report_single_session(client, peer, msg_id, opt_bytes, custom_reason)
             rep.append(f"• {r.get('icon', '🔹')} **{name}** (`{phone}`): {r.get('note')}")
             if r.get("status") == "SUCCESS":
                 success_cnt += 1
