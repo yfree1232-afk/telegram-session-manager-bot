@@ -632,7 +632,7 @@ async def callback_router(query: types.CallbackQuery, state: FSMContext):
                     rep.append(f"• 🔴 **{name}** (`{phone}`): Offline")
                 await asyncio.sleep(1.0)
 
-            rep.append(f"\n📊 **Result:** `{success_cnt} / {len(active_sessions)}` Reports Submitted!")
+            rep.append(f"\n📊 **Result:** `{success_cnt} / {len(target_sessions)}` Reports Submitted!")
             await status_msg.edit_text("\n".join(rep), reply_markup=InlineKeyboardMarkup(inline_keyboard=[
                 [InlineKeyboardButton(text="🔙 Back to Post Actions", callback_data="post_back_actions")],
                 [InlineKeyboardButton(text="🏠 Main Menu", callback_data="menu_main")]
