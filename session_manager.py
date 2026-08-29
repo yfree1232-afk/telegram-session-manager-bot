@@ -334,8 +334,43 @@ async def forward_message_single_session(client: TelegramClient, from_peer, msg_
     except Exception as e:
         return {"status": "ERROR", "icon": "🔴", "note": f"Failed: {str(e)[:30]}"}
 
-async def report_message_single_session(client: TelegramClient, peer, msg_id: int, reason_key: str, comment: str = "Inappropriate content") -> dict:
-    """Report a message/post to Telegram moderation."""
+async def fetch_report_options(client: TelegramClient, peer, msg_id: int, option_bytes: bytes = b"") -> dict:
+    """Fetch live dynamic report options and sub-categories directly from Telegram server."""
+    if not client.is_connected():
+        try:
+            await client.connect()
+        except Exception as e:
+            return {"type": "error", "error": f"Connect Failed: {e}"}
+
+    try:
+        entity = await client.get_entity(peer)
+        res = await client(functions.messages.ReportRequest(
+            peer=entity,
+            id=[msg_id],
+            option=option_bytes,
+            message=""
+        ))
+        if isinstance(res, types.ReportResultChooseOption):
+            return {
+                "type": "choose_option",
+                "title": res.title,
+                "options": [{"text": opt.text, "option_hex": opt.option.hex()} for opt in res.options]
+            }
+        elif isinstance(res, types.ReportResultAddComment):
+            return {
+                "type": "add_comment",
+                "option_hex": res.option.hex(),
+                "optional": getattr(res, "optional", True)
+            }
+        elif isinstance(res, types.ReportResultReported):
+            return {"type": "reported"}
+        return {"type": "unknown", "raw": str(res)}
+    except Exception as e:
+        logger.error(f"fetch_report_options error: {e}")
+        return {"type": "error", "error": str(e)}
+
+async def submit_final_report_single_session(client: TelegramClient, peer, msg_id: int, option_bytes: bytes, comment: str = "") -> dict:
+    """Submit final multi-level official MTProto report to Telegram."""
     if not client.is_connected():
         try:
             await client.connect()
@@ -344,39 +379,19 @@ async def report_message_single_session(client: TelegramClient, peer, msg_id: in
 
     try:
         entity = await client.get_entity(peer)
-        option_bytes = reason_key.lower().encode("utf-8")
-        
-        try:
-            await client(functions.messages.ReportRequest(
-                peer=entity,
-                id=[msg_id],
-                option=option_bytes,
-                message=comment or "Inappropriate content"
-            ))
-            return {"status": "SUCCESS", "icon": "🟢", "note": f"Reported ({reason_key.upper()}) ✅"}
-        except Exception as me:
-            logger.debug(f"messages.ReportRequest note: {me}, trying fallback...")
-            reason_map = {
-                "spam": types.InputReportReasonSpam(),
-                "fake": types.InputReportReasonFake(),
-                "violence": types.InputReportReasonViolence(),
-                "pornography": types.InputReportReasonPornography(),
-                "child_abuse": types.InputReportReasonChildAbuse(),
-                "copyright": types.InputReportReasonCopyright(),
-                "other": types.InputReportReasonOther()
-            }
-            reason_obj = reason_map.get(reason_key.lower(), types.InputReportReasonSpam())
-            await client(functions.account.ReportPeerRequest(
-                peer=entity,
-                reason=reason_obj,
-                message=f"Post #{msg_id}: {comment}"
-            ))
-            return {"status": "SUCCESS", "icon": "🟢", "note": f"Reported ({reason_key.upper()}) ✅"}
+        await client(functions.messages.ReportRequest(
+            peer=entity,
+            id=[msg_id],
+            option=option_bytes,
+            message=comment or "Inappropriate content"
+        ))
+        return {"status": "SUCCESS", "icon": "🟢", "note": "Report Submitted to Telegram ✅"}
     except FloodWaitError as fe:
         return {"status": "FLOOD_WAIT", "icon": "⏳", "note": f"FloodWait ({fe.seconds}s) ⚠️"}
     except Exception as e:
-        logger.error(f"Error reporting message {msg_id}: {e}")
+        logger.error(f"submit_final_report_single_session error: {e}")
         return {"status": "ERROR", "icon": "🔴", "note": f"Failed: {str(e)[:30]}"}
+
 
 async def send_comment_single_session(client: TelegramClient, peer, msg_id: int | None, text_content: str) -> dict:
     """Send message or reply/comment to discussion."""
