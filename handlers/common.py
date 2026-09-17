@@ -26,22 +26,16 @@ async def cleanup_user_login(user_id: int):
             pass
 
 START_TEXT = """
-❄️ <b>𝗜𝗖𝗘 𝗕𝗢𝗧 • 𝗦𝗘𝗦𝗦𝗜𝗢𝗡 𝗠𝗔𝗡𝗔𝗚𝗘𝗥</b> ❄️
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✨ <b>WELCOME TO ICE BOT</b>
+━━━━━━━━━━━━━━━━━━━━
+
 👋 <b>Welcome, {name}!</b>
 
-<blockquote><i>The Most Powerful & Aesthetic Telegram Session Generator & Account Security Suite. High-speed, secure, and multi-functional.</i></blockquote>
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-⚡ <b>String Generator:</b> Pyrogram v2 & Telethon (Fast & Safe)
-📱 <b>Device Manager:</b> Active Logins, IPs & 1-Click Terminate All
-🛡️ <b>SpamBot Status:</b> Real-time limitation check via @SpamBot
-🔐 <b>2FA Security:</b> Two-step verification audit & vulnerability check
-🚪 <b>Leave All Chats:</b> 1-Click exit all channels & supergroups
-🗑️ <b>Delete Dialogs:</b> Clear all private chats & dialog inbox
-👤 <b>Account Info:</b> DC ID, User ID, Premium status, channels count
-💼 <b>Saved Vault:</b> AES-256 Encrypted MongoDB Cloud Storage
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🛡️ <b>Trusted workspace • 100% safe handling</b>
+🟢 <b>Free mode active</b>
+📥 <i>Upload <code>.session</code>, <code>.json</code>, or paste string session to begin.</i>
+💠 <i>Choose any operation from the menu below:</i>
+━━━━━━━━━━━━━━━━━━━━
 🔐 <b>Database:</b> <i>MongoDB Atlas Cloud (AES-256 Encrypted)</i>
 """
 
