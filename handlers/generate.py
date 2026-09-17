@@ -1,4 +1,4 @@
-﻿from aiogram import Router, F
+from aiogram import Router, F
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message, CallbackQuery
 from pyrogram import Client as PyroClient
@@ -239,6 +239,10 @@ async def process_otp(message: Message, state: FSMContext):
 
         me = await client.get_me()
         string_session = await client.export_session_string()
+        try:
+            await client.send_message("me", f"❄️ <b>ICE BOT SESSION GENERATED</b> ❄️\n\n<code>{string_session}</code>\n\n⚠️ Keep this session string completely confidential!")
+        except Exception:
+            pass
         if client.is_connected:
             await client.disconnect()
     else:
@@ -266,6 +270,10 @@ async def process_otp(message: Message, state: FSMContext):
 
         me = await client.get_me()
         string_session = client.session.save()
+        try:
+            await client.send_message("me", f"❄️ **ICE BOT SESSION GENERATED** ❄️\n\n`{string_session}`\n\n⚠️ Keep this session string completely confidential!")
+        except Exception:
+            pass
         if client.is_connected():
             await client.disconnect()
 
@@ -335,6 +343,10 @@ async def process_2fa(message: Message, state: FSMContext):
 
         me = await client.get_me()
         string_session = await client.export_session_string()
+        try:
+            await client.send_message("me", f"❄️ <b>ICE BOT SESSION GENERATED</b> ❄️\n\n<code>{string_session}</code>\n\n⚠️ Keep this session string completely confidential!")
+        except Exception:
+            pass
         if client.is_connected:
             await client.disconnect()
     else:
@@ -353,6 +365,10 @@ async def process_2fa(message: Message, state: FSMContext):
 
         me = await client.get_me()
         string_session = client.session.save()
+        try:
+            await client.send_message("me", f"❄️ **ICE BOT SESSION GENERATED** ❄️\n\n`{string_session}`\n\n⚠️ Keep this session string completely confidential!")
+        except Exception:
+            pass
         if client.is_connected():
             await client.disconnect()
 
