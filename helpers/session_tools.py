@@ -1,4 +1,4 @@
-﻿import datetime
+import datetime
 from pyrogram import Client, raw
 from pyrogram.errors import (
     UserDeactivated, SessionRevoked, AuthKeyUnregistered,
@@ -264,3 +264,66 @@ async def leave_all_dialogs(session_str: str, session_type: str = "pyrogram"):
         finally:
             if client.is_connected():
                 await client.disconnect()
+
+async def check_spambot_status(session_str: str, session_type: str = "telethon"):
+    """
+    Check if the account is limited or banned by sending /start to @SpamBot.
+    """
+    session_str = session_str.strip()
+    client = TelegramClient(StringSession(session_str), config.API_ID, config.API_HASH)
+    try:
+        await client.connect()
+        if not await client.is_user_authorized():
+            return False, "Session Unauthorized or Expired"
+
+        # Send /start to SpamBot
+        spambot = await client.get_entity("SpamBot")
+        await client.send_message(spambot, "/start")
+        await asyncio.sleep(2.5)
+
+        # Get last message from SpamBot
+        messages = await client.get_messages(spambot, limit=1)
+        if messages and messages[0].text:
+            text = messages[0].text
+            is_clean = "good news" in text.lower() or "no limits" in text.lower()
+            return True, {
+                "clean": is_clean,
+                "message": text
+            }
+        else:
+            return True, {
+                "clean": True,
+                "message": "No response from @SpamBot (Account likely clean)"
+            }
+    except Exception as e:
+        return False, str(e)
+    finally:
+        if client.is_connected():
+            await client.disconnect()
+
+async def delete_all_dialogs(session_str: str, session_type: str = "telethon"):
+    """
+    Delete all private chats / dialogs from the account.
+    """
+    deleted_count = 0
+    session_str = session_str.strip()
+    client = TelegramClient(StringSession(session_str), config.API_ID, config.API_HASH)
+    try:
+        await client.connect()
+        if not await client.is_user_authorized():
+            return False, "Session Unauthorized or Expired"
+
+        async for dialog in client.iter_dialogs():
+            if dialog.is_user and not dialog.entity.is_self:
+                try:
+                    await client.delete_dialog(dialog.entity)
+                    deleted_count += 1
+                except Exception:
+                    pass
+        return True, f"Successfully cleared {deleted_count} private dialogs & chats!"
+    except Exception as e:
+        return False, str(e)
+    finally:
+        if client.is_connected():
+            await client.disconnect()
+
