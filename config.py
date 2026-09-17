@@ -18,16 +18,20 @@ API_ID = int(os.getenv("API_ID", "30929822"))
 API_HASH = os.getenv("API_HASH", "8586e9580c6480b65d23150cec959506")
 
 # Owner / Admin ID
-_owner = os.getenv("OWNER_ID") or os.getenv("ADMIN_IDS", "0")
+_owner = os.getenv("OWNER_ID") or os.getenv("ADMIN_IDS", "8721437284")
 try:
     OWNER_ID = int(_owner.split()[0].split(",")[0])
 except Exception:
-    OWNER_ID = 0
+    OWNER_ID = 8721437284
 
-# Database
-DB_NAME = os.getenv("DATABASE_NAME") or os.getenv("DB_NAME", "session_vault.db")
+# MongoDB Atlas Database
+MONGO_URI = os.getenv(
+    "MONGO_URI",
+    "mongodb+srv://yfree1232_db_user:NtdjPUmAgl7iEuKE@uploder.6fhrdxh.mongodb.net/?appName=Uploder"
+)
+DATABASE_NAME = os.getenv("DATABASE_NAME", "telegram_session_manager")
 
-# Encryption Key for Vault Security
+# Encryption Key for Ultra Secure Vault Storage
 ENCRYPTION_KEY = os.getenv("ENCRYPTION_KEY")
 if not ENCRYPTION_KEY:
     ENCRYPTION_KEY = os.getenv("SECRET_KEY", "uN_4V6z1Fw_14a_XqR8kL9s2M0yPt6Zb3Cw5Er7Tg1I=")
