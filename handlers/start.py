@@ -18,7 +18,7 @@ async def cmd_start(message: Message, state: FSMContext):
     acc_count = await db.count_user_accounts(user.id)
 
     await message.answer(
-        START_TEXT.format(name=user.first_name),
+        START_TEXT,
         reply_markup=main_menu_keyboard(config.OWNER_ID, user.id, acc_count),
         disable_web_page_preview=True
     )
@@ -77,31 +77,18 @@ async def cmd_tools(message: Message, state: FSMContext):
             pass
     await cb_menu_tools(MockQuery(message), state)
 
-@router.callback_query(F.data == "back_main")
+@router.callback_query(F.data.in_(["back_main", "cancel_action", "cancel_pending_op"]))
 async def cb_back_main(query: CallbackQuery, state: FSMContext):
     await state.clear()
     await cleanup_user_login(query.from_user.id)
     user = query.from_user
     acc_count = await db.count_user_accounts(user.id)
+    try:
+        await query.answer()
+    except Exception:
+        pass
     await query.message.edit_text(
-        START_TEXT.format(name=user.first_name),
-        reply_markup=main_menu_keyboard(config.OWNER_ID, user.id, acc_count),
-        disable_web_page_preview=True
-    )
-
-@router.callback_query(F.data == "menu_help")
-async def cb_menu_help(query: CallbackQuery):
-    await query.message.edit_text(HELP_TEXT, reply_markup=back_to_main_keyboard(), disable_web_page_preview=True)
-
-@router.callback_query(F.data == "cancel_action")
-async def cb_cancel_action(query: CallbackQuery, state: FSMContext):
-    await state.clear()
-    await cleanup_user_login(query.from_user.id)
-    await query.answer("Operation cancelled ❌", show_alert=False)
-    user = query.from_user
-    acc_count = await db.count_user_accounts(user.id)
-    await query.message.edit_text(
-        START_TEXT.format(name=user.first_name),
+        START_TEXT,
         reply_markup=main_menu_keyboard(config.OWNER_ID, user.id, acc_count),
         disable_web_page_preview=True
     )
