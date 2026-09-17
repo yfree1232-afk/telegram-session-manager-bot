@@ -238,8 +238,8 @@ async def execute_contact_tool(message: Message, raw_session: str):
 You can clean and delete all contacts linked to this Telegram account below:
 """
         btns = [
-            [InlineKeyboardButton(text="🗑️ Delete All Contacts", callback_data="action_delete_contacts")],
-            [InlineKeyboardButton(text="✖️ Cancel", callback_data="cancel_pending_op")]
+            [InlineKeyboardButton(text="Delete All Contacts", callback_data="action_delete_contacts", icon_custom_emoji_id="5465665476988315663")],
+            [InlineKeyboardButton(text="Cancel", callback_data="cancel_pending_op", icon_custom_emoji_id="5465665476988315663")]
         ]
         await prog.edit_text(text, reply_markup=InlineKeyboardMarkup(inline_keyboard=btns))
     else:
@@ -804,9 +804,9 @@ async def cb_fpview(query: CallbackQuery):
 💡 <i>Is fingerprint se generate kiya hua session Telegram settings me issi real device ke roop me appear hoga.</i>
 """
     buttons = [
-        [InlineKeyboardButton(text=f"⚡ Generate Session with {fp['name'][:18]}", callback_data=f"fpgen_{dev_key}")],
-        [InlineKeyboardButton(text="🔙 Back to Devices", callback_data="tool_fingerprints")],
-        [InlineKeyboardButton(text="✖️ Cancel", callback_data="cancel_pending_op")]
+        [InlineKeyboardButton(text=f"Generate Session with {fp['name'][:18]}", callback_data=f"fpgen_{dev_key}", icon_custom_emoji_id="5445284980978621387")],
+        [InlineKeyboardButton(text="Back to Devices", callback_data="tool_fingerprints", icon_custom_emoji_id="5409180749876174620")],
+        [InlineKeyboardButton(text="Cancel", callback_data="cancel_pending_op", icon_custom_emoji_id="5465665476988315663")]
     ]
     await query.message.edit_text(text, reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons))
 
@@ -1017,8 +1017,8 @@ async def handle_document_upload(message: Message, state: FSMContext):
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
             btns = [
-                [InlineKeyboardButton(text="💼 Open Encrypted Vault", callback_data="menu_vault")],
-                [InlineKeyboardButton(text="✖️ Cancel", callback_data="cancel_pending_op")]
+                [InlineKeyboardButton(text="Open Encrypted Vault", callback_data="menu_vault", icon_custom_emoji_id="5409180749876174620")],
+                [InlineKeyboardButton(text="Cancel", callback_data="cancel_pending_op", icon_custom_emoji_id="5465665476988315663")]
             ]
             await status_msg.edit_text(text, reply_markup=InlineKeyboardMarkup(inline_keyboard=btns))
 
