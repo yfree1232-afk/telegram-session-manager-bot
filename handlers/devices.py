@@ -1,4 +1,4 @@
-﻿from aiogram import Router, F
+from aiogram import Router, F
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
 from database.db import db
@@ -7,23 +7,27 @@ from helpers.keyboard import (
     terminate_confirm_keyboard
 )
 from helpers.states import DeviceStates
-from helpers.session_tools import get_active_sessions, terminate_all_sessions
+from helpers.session_tools import get_active_sessions, terminate_all_sessions, terminate_single_session
 from handlers.common import INSPECT_CACHE, detect_session_type
 
 router = Router()
 
-@router.callback_query(F.data == "menu_devices")
+@router.callback_query(F.data.in_(["menu_devices", "a_kill", "a_term"]))
 async def cb_menu_devices(query: CallbackQuery, state: FSMContext):
     await state.clear()
-    text = """
-╭━━━━━━━━━━━━━━━━━━━━╮
-│  📱 <b>ᴀᴄᴛɪᴠᴇ ᴅᴇᴠɪᴄᴇs & sᴇᴄᴜʀɪᴛʏ</b>  │
-╰━━━━━━━━━━━━━━━━━━━━╯
-Apne Telegram account ke active logins, devices, IP address aur locations inspect karein ya unauthorized sessions terminate karein.
+    is_term = query.data == "a_term"
+    title = "🚨 <b>Terminate All</b>" if is_term else "📱 <b>Kill Sessions</b>"
+    text = f"""
+{title}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-Aap session string paste karna chahte hain ya apne saved vault se select karna chahte hain?
+⏳ <b>Waiting for files...</b>
+
+Please send files (<code>.session</code>, <code>.json</code>) or session string to inspect and terminate active logins.
 """
-    await query.message.edit_text(text, reply_markup=session_source_keyboard("devices"))
+    await state.set_state(DeviceStates.waiting_session)
+    await state.update_data(auto_term=is_term)
+    await query.message.edit_text(text, reply_markup=cancel_keyboard())
 
 @router.callback_query(F.data == "src_paste_devices")
 async def cb_src_paste_devices(query: CallbackQuery, state: FSMContext):
@@ -114,11 +118,29 @@ async def show_devices_view(user_id: int, message: Message, raw_session: str, se
             "────────────────────────────\n"
         )
 
-    buttons = [
-        [InlineKeyboardButton(text="🚨 ᴛᴇʀᴍɪɴᴀᴛᴇ ᴀʟʟ ᴏᴛʜᴇʀ sᴇssɪᴏɴs", callback_data="action_term_all")],
-        [InlineKeyboardButton(text="🔙 ʙᴀᴄᴋ ᴛᴏ ᴍᴇɴᴜ", callback_data="back_main")]
-    ]
+    buttons = []
+    for idx, auth in enumerate(authorizations, start=1):
+        if not auth["current"]:
+            buttons.append([InlineKeyboardButton(text=f"❌ Kill {auth['device_model'][:18]}", callback_data=f"kill_single_{auth['hash']}")])
+    buttons.append([InlineKeyboardButton(text="🚨 Terminate All Other Sessions", callback_data="action_term_all")])
+    buttons.append([InlineKeyboardButton(text="✖️ Cancel", callback_data="cancel_pending_op")])
     await wait_msg.edit_text(text, reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons))
+
+@router.callback_query(F.data.startswith("kill_single_"))
+async def cb_kill_single(query: CallbackQuery):
+    auth_hash = query.data.split("_")[2]
+    user_id = query.from_user.id
+    if user_id not in INSPECT_CACHE:
+        await query.answer("Session expired from cache. Please select again!", show_alert=True)
+        return
+    data = INSPECT_CACHE[user_id]
+    await query.answer("Terminating device...", show_alert=False)
+    success, msg = await terminate_single_session(data["session"], data["type"], int(auth_hash))
+    if success:
+        await query.answer("Session terminated successfully! 🗑️", show_alert=True)
+        await show_devices_view(user_id, query.message, data["session"], data["type"])
+    else:
+        await query.answer(f"Failed: {msg}", show_alert=True)
 
 @router.callback_query(F.data == "action_term_all")
 async def cb_action_term_all(query: CallbackQuery):
