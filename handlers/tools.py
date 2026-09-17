@@ -30,6 +30,25 @@ router = Router()
 CONTACT_CACHE: dict[int, str] = {}
 
 # =========================================================================
+# 🛠️ TOOLS MENU DASHBOARD
+# =========================================================================
+
+@router.callback_query(F.data == "menu_tools")
+async def cb_menu_tools(query: CallbackQuery, state: FSMContext = None):
+    if state:
+        await state.clear()
+    text = """
+🛠️ <b>SECURITY & UTILITY TOOLS</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Select an operation below or choose from the main dashboard:
+""".strip()
+    try:
+        await query.answer()
+    except Exception:
+        pass
+    await query.message.edit_text(text, reply_markup=tools_menu_keyboard())
+
+# =========================================================================
 # 📩 READ OTP (1:1 ICE BOT)
 # =========================================================================
 
