@@ -1,8 +1,13 @@
-.env
+﻿# Git ignore for Telegram Session Manager Bot
 __pycache__/
 *.py[cod]
 *$py.class
+*.db
+*.sqlite3
 *.session
 *.session-journal
-*.db
+.env
+.venv
+env/
+venv/
 *.log
