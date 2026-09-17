@@ -433,4 +433,211 @@ async def get_account_full_info(session_str: str, session_type: str = "telethon"
         if client.is_connected():
             await client.disconnect()
 
+# =========================================================================
+# 📱 DEVICE FINGERPRINTS / CLONER SUITE
+# =========================================================================
+
+DEVICE_FINGERPRINTS = {
+    "samsung": {
+        "name": "Samsung Galaxy S24 Ultra",
+        "icon": "📱",
+        "device_model": "Samsung Galaxy S24 Ultra",
+        "system_version": "Android 14 (One UI 6.1)",
+        "app_version": "10.14.0",
+        "lang_code": "en",
+        "system_lang_code": "en-US"
+    },
+    "iphone": {
+        "name": "Apple iPhone 15 Pro Max",
+        "icon": "🍏",
+        "device_model": "iPhone 15 Pro Max",
+        "system_version": "iOS 17.5.1",
+        "app_version": "10.14.1",
+        "lang_code": "en",
+        "system_lang_code": "en-US"
+    },
+    "xiaomi": {
+        "name": "Xiaomi 14 Pro",
+        "icon": "📱",
+        "device_model": "Xiaomi 14 Pro",
+        "system_version": "Android 14 (HyperOS)",
+        "app_version": "10.14.0",
+        "lang_code": "en",
+        "system_lang_code": "en-US"
+    },
+    "desktop": {
+        "name": "Windows 11 PC (64-bit)",
+        "icon": "💻",
+        "device_model": "Desktop PC x64",
+        "system_version": "Windows 11 Pro 23H2",
+        "app_version": "5.1.5 x64",
+        "lang_code": "en",
+        "system_lang_code": "en-US"
+    },
+    "macos": {
+        "name": "Apple MacBook Pro M3",
+        "icon": "🍎",
+        "device_model": "MacBook Pro M3",
+        "system_version": "macOS Sonoma 14.5",
+        "app_version": "10.14.2",
+        "lang_code": "en",
+        "system_lang_code": "en-US"
+    },
+    "default": {
+        "name": "Official Telegram App",
+        "icon": "⚡",
+        "device_model": "Official Telegram App",
+        "system_version": "14.0",
+        "app_version": "10.14.0",
+        "lang_code": "en",
+        "system_lang_code": "en-US"
+    }
+}
+
+# =========================================================================
+# 📅 ACCOUNT REGISTRATION AGE ESTIMATOR
+# =========================================================================
+
+def estimate_account_age(user_id: int) -> dict:
+    milestones = [
+        (100_000_000, "2013 - 2015", "Pioneer (Early Telegram)", "💎 Ultra Rare"),
+        (250_000_000, "2016", "Veteran (8+ years old)", "⭐️ High Value"),
+        (450_000_000, "2017", "Established (7+ years old)", "⭐️ High Value"),
+        (750_000_000, "2018", "Established (6+ years old)", "✨ Rare"),
+        (1_050_000_000, "2019", "Regular (5+ years old)", "✨ Rare"),
+        (1_550_000_000, "2020", "Covid-Era (4+ years old)", "🟢 Established"),
+        (2_100_000_000, "2021", "Active (3+ years old)", "🟢 Established"),
+        (5_300_000_000, "2022 - 2023", "Modern (1-2 years old)", "⚪️ Normal"),
+        (6_900_000_000, "2023 - 2024", "Recent Account", "⚪️ Normal"),
+        (9_999_999_999, "2024 - 2026", "Fresh / New Account", "🆕 Fresh")
+    ]
+    for limit, period, desc, rarity in milestones:
+        if user_id <= limit:
+            return {
+                "user_id": user_id,
+                "period": period,
+                "description": desc,
+                "rarity": rarity
+            }
+    return {
+        "user_id": user_id,
+        "period": "2024 - 2026",
+        "description": "Fresh Account",
+        "rarity": "🆕 Fresh"
+    }
+
+# =========================================================================
+# 👁️ ACCOUNT PRIVACY SETTINGS AUDIT
+# =========================================================================
+
+async def check_account_privacy(session_str: str):
+    session_str = session_str.strip()
+    client = TelegramClient(StringSession(session_str), config.API_ID, config.API_HASH)
+    try:
+        await client.connect()
+        if not await client.is_user_authorized():
+            return False, "Session Unauthorized or Expired"
+
+        from telethon.tl.functions.account import GetPrivacyRequest
+        from telethon.tl.types import (
+            InputPrivacyKeyPhoneNumber, InputPrivacyKeyStatusTimestamp,
+            InputPrivacyKeyProfilePhoto, PrivacyValueAllowAll,
+            PrivacyValueAllowContacts, PrivacyValueDisallowAll
+        )
+
+        def parse_rule(rules):
+            for r in rules:
+                if isinstance(r, PrivacyValueDisallowAll):
+                    return "🔒 Nobody (Hidden)"
+                elif isinstance(r, PrivacyValueAllowContacts):
+                    return "👥 My Contacts Only"
+                elif isinstance(r, PrivacyValueAllowAll):
+                    return "🌐 Everybody (Public)"
+            return "🔒 Protected"
+
+        phone_res = await client(GetPrivacyRequest(key=InputPrivacyKeyPhoneNumber()))
+        last_seen_res = await client(GetPrivacyRequest(key=InputPrivacyKeyStatusTimestamp()))
+        photo_res = await client(GetPrivacyRequest(key=InputPrivacyKeyProfilePhoto()))
+
+        return True, {
+            "phone_privacy": parse_rule(phone_res.rules),
+            "last_seen_privacy": parse_rule(last_seen_res.rules),
+            "photo_privacy": parse_rule(photo_res.rules)
+        }
+    except Exception as e:
+        return False, str(e)
+    finally:
+        if client.is_connected():
+            await client.disconnect()
+
+# =========================================================================
+# 🔀 SESSION FORMAT CONVERTER
+# =========================================================================
+
+async def convert_session(session_str: str):
+    session_str = session_str.strip()
+    from handlers.common import detect_session_type
+    current_type = detect_session_type(session_str)
+
+    if current_type == "telethon":
+        client = TelegramClient(StringSession(session_str), config.API_ID, config.API_HASH)
+        try:
+            await client.connect()
+            if not await client.is_user_authorized():
+                return False, "Telethon session is expired or invalid"
+            me = await client.get_me()
+
+            import struct
+            import base64
+            auth_bytes = client.session.auth_key.key
+            dc_id = client.session.dc_id
+            packed = struct.pack(">B?256sQ?", dc_id, False, auth_bytes, me.id, False)
+            pyro_string = base64.urlsafe_b64encode(packed).decode().rstrip("=")
+
+            return True, {
+                "from_type": "TELETHON",
+                "to_type": "PYROGRAM (v2)",
+                "result": pyro_string,
+                "user": me.first_name,
+                "phone": me.phone
+            }
+        except Exception as e:
+            return False, str(e)
+        finally:
+            if client.is_connected():
+                await client.disconnect()
+    else:
+        # Pyrogram to Telethon
+        try:
+            import base64
+            import struct
+            import ipaddress
+            pad = len(session_str) % 4
+            s_padded = session_str + ("=" * (4 - pad) if pad else "")
+            raw_bytes = base64.urlsafe_b64decode(s_padded)
+            dc_id, test_mode, auth_key, user_id, is_bot = struct.unpack(">B?256sQ?", raw_bytes[:267])
+
+            dc_ips = {
+                1: "149.154.175.50",
+                2: "149.154.167.51",
+                3: "149.154.175.100",
+                4: "149.154.167.91",
+                5: "91.108.56.165"
+            }
+            ip = dc_ips.get(dc_id, "149.154.167.51")
+            ip_bytes = ipaddress.ip_address(ip).packed
+            data_bytes = struct.pack(">B4sH256s", dc_id, ip_bytes, 443, auth_key)
+            telethon_string = "1" + base64.urlsafe_b64encode(data_bytes).decode().rstrip("=")
+
+            return True, {
+                "from_type": "PYROGRAM (v2)",
+                "to_type": "TELETHON",
+                "result": telethon_string,
+                "user": f"User {user_id}",
+                "phone": "Extracted"
+            }
+        except Exception as e:
+            return False, str(e)
+
+
 
