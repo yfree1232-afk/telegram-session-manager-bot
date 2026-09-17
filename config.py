@@ -1,12 +1,6 @@
-﻿import os
-import asyncio
-
-# Fix for Python 3.12+ / 3.14 event loop compatibility
-try:
-    asyncio.get_event_loop()
-except RuntimeError:
-    asyncio.set_event_loop(asyncio.new_event_loop())
-
+import os
+import sys
+from pathlib import Path
 from dotenv import load_dotenv
 from cryptography.fernet import Fernet
 
@@ -24,12 +18,25 @@ try:
 except Exception:
     OWNER_ID = 8721437284
 
+ADMIN_IDS = [OWNER_ID]
+try:
+    _raw_admins = os.getenv("ADMIN_IDS", "")
+    if _raw_admins:
+        for a in _raw_admins.replace(",", " ").split():
+            if a.isdigit() and int(a) not in ADMIN_IDS:
+                ADMIN_IDS.append(int(a))
+except Exception:
+    pass
+
+MAX_SESSIONS_PER_USER = int(os.getenv("MAX_SESSIONS_PER_USER", "50"))
+
 # MongoDB Atlas Database
 MONGO_URI = os.getenv(
     "MONGO_URI",
     "mongodb+srv://yfree1232_db_user:NtdjPUmAgl7iEuKE@uploder.6fhrdxh.mongodb.net/?appName=Uploder"
 )
 DATABASE_NAME = os.getenv("DATABASE_NAME", "telegram_session_manager")
+DB_NAME = DATABASE_NAME
 
 # Encryption Key for Ultra Secure Vault Storage
 ENCRYPTION_KEY = os.getenv("ENCRYPTION_KEY")
@@ -41,7 +48,11 @@ if not ENCRYPTION_KEY:
         ENCRYPTION_KEY = Fernet.generate_key().decode()
 
 # UI Theme & Assets
-BOT_NAME = "Session Manager"
+BOT_NAME = "Session Manager Voltx"
 SUPPORT_GROUP = os.getenv("SUPPORT_GROUP", "https://t.me/")
 CHANNEL = os.getenv("CHANNEL", "https://t.me/")
 START_IMG = os.getenv("START_IMG", "https://graph.org/file/e20f1883317dd4ff3cbfa.jpg")
+
+DATA_DIR = Path(__file__).parent / "data"
+DATA_DIR.mkdir(parents=True, exist_ok=True)
+
