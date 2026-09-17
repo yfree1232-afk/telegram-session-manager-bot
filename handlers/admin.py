@@ -1,4 +1,4 @@
-﻿import asyncio
+import asyncio
 from aiogram import Router, F
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
@@ -25,8 +25,8 @@ async def cb_admin_panel(query: CallbackQuery):
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
     buttons = [
-        [InlineKeyboardButton(text="📢 ʙʀᴏᴀᴅᴄᴀsᴛ ᴍᴇssᴀɢᴇ", callback_data="admin_broadcast")],
-        [InlineKeyboardButton(text="🔙 ʙᴀᴄᴋ ᴛᴏ ᴍᴇɴᴜ", callback_data="back_main")]
+        [InlineKeyboardButton(text="📢 ʙʀᴏᴀᴅᴄᴀsᴛ ᴍᴇssᴀɢᴇ", callback_data="admin_broadcast", icon_custom_emoji_id="5445284980978621387")],
+        [InlineKeyboardButton(text="🔙 ʙᴀᴄᴋ ᴛᴏ ᴍᴇɴᴜ", callback_data="back_main", icon_custom_emoji_id="5465665476988315663")]
     ]
     await query.message.edit_text(text, reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons))
 
