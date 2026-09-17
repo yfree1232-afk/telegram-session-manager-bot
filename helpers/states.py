@@ -24,6 +24,12 @@ class ToolStates(StatesGroup):
     waiting_age_session = State()
     waiting_convert_session = State()
     waiting_privacy_session = State()
+    waiting_read_otp = State()
+    waiting_contact = State()
+    waiting_split = State()
+    waiting_api_link = State()
+    waiting_merge = State()
+    waiting_kill_session = State()
 
 class VCStates(StatesGroup):
     waiting_vc_msg = State()
