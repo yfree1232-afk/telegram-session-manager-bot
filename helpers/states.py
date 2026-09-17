@@ -1,6 +1,7 @@
 from aiogram.fsm.state import State, StatesGroup
 
 class GenerateStates(StatesGroup):
+    waiting_fingerprint = State()
     waiting_custom_api_id = State()
     waiting_custom_api_hash = State()
     waiting_phone = State()
@@ -20,6 +21,9 @@ class ToolStates(StatesGroup):
     waiting_delete_dialogs_session = State()
     waiting_2fa_session = State()
     waiting_info_session = State()
+    waiting_age_session = State()
+    waiting_convert_session = State()
+    waiting_privacy_session = State()
 
 class VCStates(StatesGroup):
     waiting_vc_msg = State()
