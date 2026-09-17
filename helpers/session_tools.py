@@ -1,3 +1,4 @@
+import asyncio
 import datetime
 from pyrogram import Client, raw
 from pyrogram.errors import (
@@ -326,4 +327,110 @@ async def delete_all_dialogs(session_str: str, session_type: str = "telethon"):
     finally:
         if client.is_connected():
             await client.disconnect()
+
+async def check_2fa_status(session_str: str, session_type: str = "telethon"):
+    """
+    Checks if Two-Step Verification (2FA) is active on the account.
+    Returns details on 2FA status, hint, and recovery email presence.
+    """
+    session_str = session_str.strip()
+    client = TelegramClient(StringSession(session_str), config.API_ID, config.API_HASH)
+    try:
+        await client.connect()
+        if not await client.is_user_authorized():
+            return False, "Session Unauthorized or Expired"
+
+        from telethon.tl.functions.account import GetPasswordRequest
+        pwd_info = await client(GetPasswordRequest())
+        has_pwd = bool(getattr(pwd_info, "has_password", False))
+        hint = getattr(pwd_info, "hint", None)
+        has_rec = bool(getattr(pwd_info, "has_recovery", False))
+        email_pattern = getattr(pwd_info, "email_unconfirmed_pattern", None)
+
+        return True, {
+            "has_2fa": has_pwd,
+            "hint": hint if has_pwd else None,
+            "has_recovery": has_rec,
+            "email_pattern": email_pattern
+        }
+    except Exception as e:
+        return False, str(e)
+    finally:
+        if client.is_connected():
+            await client.disconnect()
+
+async def get_account_full_info(session_str: str, session_type: str = "telethon"):
+    """
+    Fetches comprehensive account details: Profile, DC, Security, Stats.
+    """
+    session_str = session_str.strip()
+    client = TelegramClient(StringSession(session_str), config.API_ID, config.API_HASH)
+    try:
+        await client.connect()
+        if not await client.is_user_authorized():
+            return False, "Session Unauthorized or Expired"
+
+        me = await client.get_me()
+        user_id = me.id
+        name = f"{me.first_name or ''} {me.last_name or ''}".strip()
+        username = me.username or "None"
+        phone = me.phone or "Hidden"
+        is_premium = bool(getattr(me, "premium", False))
+        is_verified = bool(getattr(me, "verified", False))
+        is_restricted = bool(getattr(me, "restricted", False))
+        is_scam = bool(getattr(me, "scam", False))
+        is_fake = bool(getattr(me, "fake", False))
+
+        # Check 2FA
+        from telethon.tl.functions.account import GetPasswordRequest
+        has_2fa = False
+        try:
+            pwd = await client(GetPasswordRequest())
+            has_2fa = bool(getattr(pwd, "has_password", False))
+        except Exception:
+            pass
+
+        # Check Active Devices Count
+        active_sessions = 1
+        try:
+            auths = await client(GetAuthorizationsRequest())
+            active_sessions = len(auths.authorizations)
+        except Exception:
+            pass
+
+        # Count Dialogs & Channels
+        dialog_cnt = 0
+        channel_cnt = 0
+        try:
+            async for d in client.iter_dialogs(limit=100):
+                dialog_cnt += 1
+                if d.is_channel or d.is_group:
+                    channel_cnt += 1
+        except Exception:
+            pass
+
+        dc_id = getattr(client.session, "dc_id", "Unknown")
+
+        return True, {
+            "user_id": user_id,
+            "name": name,
+            "username": username,
+            "phone": phone,
+            "dc_id": dc_id,
+            "is_premium": is_premium,
+            "is_verified": is_verified,
+            "is_restricted": is_restricted,
+            "is_scam": is_scam,
+            "is_fake": is_fake,
+            "has_2fa": has_2fa,
+            "active_sessions": active_sessions,
+            "dialogs_count": dialog_cnt,
+            "channels_count": channel_cnt
+        }
+    except Exception as e:
+        return False, str(e)
+    finally:
+        if client.is_connected():
+            await client.disconnect()
+
 
