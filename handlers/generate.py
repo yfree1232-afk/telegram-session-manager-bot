@@ -187,7 +187,6 @@ async def process_phone(message: Message, state: FSMContext):
             system_version=fp["system_version"],
             app_version=fp["app_version"],
             lang_code=fp["lang_code"],
-            system_lang_code=fp["system_lang_code"],
             in_memory=True
         )
         try:
