@@ -1,4 +1,4 @@
-﻿from pyrogram import Client as PyroClient
+from pyrogram import Client as PyroClient
 from telethon import TelegramClient
 
 ACTIVE_LOGINS: dict[int, dict] = {}
@@ -31,38 +31,50 @@ START_TEXT = """
 ╚══════════════════════════╝
 👋 <b>Welcome, {name}!</b>
 
-<blockquote><i>The most advanced Telegram Session Suite for Pyrogram & Telethon accounts.</i></blockquote>
+<blockquote><i>The Ultimate All-in-One Telegram Account & Session Automation Suite inspired by @Oversout_bot.</i></blockquote>
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-⚡ <b>String Generator:</b> Pyrogram v2 & Telethon
-📱 <b>Device Manager:</b> View Active IPs & Terminate
-💼 <b>Account Vault:</b> Encrypted Session Storage
-🛡️ <b>Health Checker:</b> Check Alive / Banned Status
-🛠 <b>Utility Tools:</b> Leave Channels, Clean Dialogs
+⚡ <b>String Generator:</b> Pyrogram v2 & Telethon (Fast & Safe)
+🎙️ <b>VC Auto-DM & Blaster:</b> Real-time listener DMs & Auto-detect
+📱 <b>Device Manager:</b> Active IPs, Models & 1-Click Terminate All
+👥 <b>Account Vault:</b> Encrypted Cloud Storage & 1-Click ON/OFF
+📡 <b>Multi Broadcast:</b> Send announcements across all IDs
+🛠️ <b>Utility Tools:</b> Leave all channels, Clear chats & SpamBot
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🔐 <i>100% Client-side Encrypted & Highly Secure.</i>
+🔐 <b>Database:</b> <i>MongoDB Atlas Cloud (AES-256 Encrypted)</i>
 """
 
 HELP_TEXT = """
 📖 <b>𝗛𝗢𝗪 𝗧𝗢 𝗨𝗦𝗘 𝗧𝗛𝗜𝗦 𝗕𝗢𝗧</b>
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-1️⃣ <b>Generate String Session:</b>
+1️⃣ <b>⚡ Generate String Session:</b>
 • Click on <code>⚡ Generate Session</code>.
-• Select Pyrogram v2 or Telethon.
-• Use default API or enter your own API_ID & API_HASH.
+• Choose <b>Pyrogram (v2)</b> or <b>Telethon</b>.
+• Select <i>Default Fast API</i> or your custom API credentials.
 • Enter your phone number with country code (e.g. <code>+919876543210</code>).
-• Enter the OTP code. 
-  <i>Tip: If Telegram blocks OTP delivery, enter code with spaces like <code>1 2 3 4 5</code>.</i>
-• If 2FA is enabled, enter your password.
-• Your session will be delivered instantly with 1-click copy & save!
+• Enter OTP with spaces (e.g. <code>1 2 3 4 5</code>) to avoid Telegram blocks.
+• Provide 2FA password if enabled. Instant 1-click copy & save to vault!
 
-2️⃣ <b>Active Devices & Security:</b>
-• View all logged-in devices, active IPs, countries, and login dates.
-• Click <b>Terminate All Other Sessions</b> to kick out all unknown devices immediately.
+2️⃣ <b>🎙️ Voice Chat (VC) Auto-DM:</b>
+• 1-Click <i>Auto-Detect Live VCs</i> across all groups.
+• Customize text (with <code>{name}</code>, <code>{channel}</code>), Voice note, Stickers, or Media.
+• Anti-ban dynamic delays (1.5s to 8.0s).
+• Auto-skips speakers & hosts to keep accounts safe.
 
-3️⃣ <b>Account Vault:</b>
-• Store your multiple sessions safely with AES-Fernet encryption.
-• Run 1-click Alive/Dead status checks on your accounts.
+3️⃣ <b>📱 Active Devices & Security:</b>
+• Inspect all logged-in devices, IP addresses, countries, and login dates.
+• Click <b>Terminate All Other Sessions</b> to kick out all unknown devices immediately!
+
+4️⃣ <b>👥 Account Vault & ON/OFF Toggles:</b>
+• Store unlimited accounts with AES-Fernet cloud encryption.
+• Use 1-click ON/OFF switches to decide which accounts participate in automation.
+• Batch health ping to detect active vs banned accounts.
+
+5️⃣ <b>🛠️ Account Utilities:</b>
+• Leave all channels and groups with 1 click.
+• Delete all dialogs / clear chat history.
+• Check SpamBot / Ban status directly from Telegram!
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
+
