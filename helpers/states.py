@@ -18,6 +18,8 @@ class ToolStates(StatesGroup):
     waiting_health_session = State()
     waiting_spambot_session = State()
     waiting_delete_dialogs_session = State()
+    waiting_2fa_session = State()
+    waiting_info_session = State()
 
 class VCStates(StatesGroup):
     waiting_vc_msg = State()
