@@ -26,55 +26,61 @@ async def cleanup_user_login(user_id: int):
             pass
 
 START_TEXT = """
-╔══════════════════════════╗
-║  ⚡ <b>𝗦𝗘𝗦𝗦𝗜𝗢𝗡 𝗠𝗔𝗡𝗔𝗚𝗘𝗥 𝗩𝗢𝗟𝗧𝗫</b> ⚡  ║
-╚══════════════════════════╝
+❄️ <b>𝗜𝗖𝗘 𝗕𝗢𝗧 • 𝗦𝗘𝗦𝗦𝗜𝗢𝗡 𝗠𝗔𝗡𝗔𝗚𝗘𝗥</b> ❄️
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 👋 <b>Welcome, {name}!</b>
 
-<blockquote><i>The Ultimate All-in-One Telegram Account & Session Automation Suite inspired by @Oversout_bot.</i></blockquote>
+<blockquote><i>The Most Powerful & Aesthetic Telegram Session Generator & Account Security Suite. High-speed, secure, and multi-functional.</i></blockquote>
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ⚡ <b>String Generator:</b> Pyrogram v2 & Telethon (Fast & Safe)
-🎙️ <b>VC Auto-DM & Blaster:</b> Real-time listener DMs & Auto-detect
-📱 <b>Device Manager:</b> Active IPs, Models & 1-Click Terminate All
-👥 <b>Account Vault:</b> Encrypted Cloud Storage & 1-Click ON/OFF
-📡 <b>Multi Broadcast:</b> Send announcements across all IDs
-🛠️ <b>Utility Tools:</b> Leave all channels, Clear chats & SpamBot
+📱 <b>Device Manager:</b> Active Logins, IPs & 1-Click Terminate All
+🛡️ <b>SpamBot Status:</b> Real-time limitation check via @SpamBot
+🔐 <b>2FA Security:</b> Two-step verification audit & vulnerability check
+🚪 <b>Leave All Chats:</b> 1-Click exit all channels & supergroups
+🗑️ <b>Delete Dialogs:</b> Clear all private chats & dialog inbox
+👤 <b>Account Info:</b> DC ID, User ID, Premium status, channels count
+💼 <b>Saved Vault:</b> AES-256 Encrypted MongoDB Cloud Storage
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 🔐 <b>Database:</b> <i>MongoDB Atlas Cloud (AES-256 Encrypted)</i>
 """
 
 HELP_TEXT = """
-📖 <b>𝗛𝗢𝗪 𝗧𝗢 𝗨𝗦𝗘 𝗧𝗛𝗜𝗦 𝗕𝗢𝗧</b>
+📖 <b>𝗜𝗖𝗘 𝗕𝗢𝗧 • 𝗨𝗦𝗘𝗥 𝗚𝗨𝗜𝗗𝗘</b>
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 1️⃣ <b>⚡ Generate String Session:</b>
-• Click on <code>⚡ Generate Session</code>.
+• Click <code>⚡ Generate Session</code>.
 • Choose <b>Pyrogram (v2)</b> or <b>Telethon</b>.
-• Select <i>Default Fast API</i> or your custom API credentials.
+• Select <i>Official Fast API</i> or enter custom API credentials.
 • Enter your phone number with country code (e.g. <code>+919876543210</code>).
-• Enter OTP with spaces (e.g. <code>1 2 3 4 5</code>) to avoid Telegram blocks.
-• Provide 2FA password if enabled. Instant 1-click copy & save to vault!
+• Enter OTP (use spaces like <code>1 2 3 4 5</code> if needed).
+• Enter 2FA password if enabled.
+• The session string is sent in a <b>copyable box</b>, sent to your <b>Saved Messages</b>, and can be saved to your <b>Encrypted Vault</b> with 1 click!
 
-2️⃣ <b>🎙️ Voice Chat (VC) Auto-DM:</b>
-• 1-Click <i>Auto-Detect Live VCs</i> across all groups.
-• Customize text (with <code>{name}</code>, <code>{channel}</code>), Voice note, Stickers, or Media.
-• Anti-ban dynamic delays (1.5s to 8.0s).
-• Auto-skips speakers & hosts to keep accounts safe.
+2️⃣ <b>📱 Active Devices & Remote Kill:</b>
+• Paste any session string OR select an account from your Vault.
+• See all connected devices, device models, OS, app version, IP, country, and active time.
+• Click <b>Terminate All Other Sessions</b> to immediately disconnect all unknown devices!
 
-3️⃣ <b>📱 Active Devices & Security:</b>
-• Inspect all logged-in devices, IP addresses, countries, and login dates.
-• Click <b>Terminate All Other Sessions</b> to kick out all unknown devices immediately!
+3️⃣ <b>🛡️ SpamBot Status Checker:</b>
+• Check whether an account is limited, muted, or clean by querying @SpamBot in real-time.
 
-4️⃣ <b>👥 Account Vault & ON/OFF Toggles:</b>
-• Store unlimited accounts with AES-Fernet cloud encryption.
-• Use 1-click ON/OFF switches to decide which accounts participate in automation.
-• Batch health ping to detect active vs banned accounts.
+4️⃣ <b>🔐 2FA Security Audit:</b>
+• Verify if Two-Step Verification is active, see the password hint, and check if recovery email is bound.
 
-5️⃣ <b>🛠️ Account Utilities:</b>
-• Leave all channels and groups with 1 click.
-• Delete all dialogs / clear chat history.
-• Check SpamBot / Ban status directly from Telegram!
+5️⃣ <b>👤 Account Info Inspector:</b>
+• Full profile breakdown: User ID, DC ID (Miami/Amsterdam/Singapore), phone, premium badge, dialog counts, and active devices.
+
+6️⃣ <b>🚪 Leave All Channels & Groups:</b>
+• Clean up your account by leaving all joined channels and public groups with 1 click.
+
+7️⃣ <b>🗑️ Delete All Dialogs:</b>
+• Clear all private messages and chats for maximum privacy.
+
+8️⃣ <b>💼 Encrypted Vault & Backup:</b>
+• Store accounts securely with AES-Fernet cloud encryption.
+• Ping accounts, export a complete <code>.txt</code> backup file, or manage anytime!
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
 
