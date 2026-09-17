@@ -1,4 +1,9 @@
 import asyncio
+try:
+    asyncio.get_event_loop()
+except RuntimeError:
+    asyncio.set_event_loop(asyncio.new_event_loop())
+
 import datetime
 from pyrogram import Client, raw
 from pyrogram.errors import (
@@ -638,6 +643,251 @@ async def convert_session(session_str: str):
             }
         except Exception as e:
             return False, str(e)
+
+# =========================================================================
+# 📩 READ OTP (TELEGRAM OFFICIAL 777000 NOTIFICATIONS)
+# =========================================================================
+
+async def read_latest_otp(session_str: str, session_type: str = "telethon"):
+    """Fetch the latest login OTP sent to the account by Telegram (from 777000)."""
+    session_str = session_str.strip()
+    client = TelegramClient(StringSession(session_str), config.API_ID, config.API_HASH)
+    try:
+        await client.connect()
+        if not await client.is_user_authorized():
+            return False, "Session is expired or invalid."
+
+        me = await client.get_me()
+        otp_found = None
+        full_msg = None
+        msg_date = None
+
+        async for msg in client.iter_messages(777000, limit=5):
+            if msg.text:
+                full_msg = msg.text
+                msg_date = msg.date.strftime("%Y-%m-%d %H:%M:%S UTC") if msg.date else "Recent"
+                import re
+                matches = re.findall(r'\b\d{5,6}\b', msg.text)
+                if matches:
+                    otp_found = matches[0]
+                    break
+                elif "code" in msg.text.lower():
+                    otp_found = msg.text
+                    break
+
+        if not full_msg:
+            return True, {
+                "user": me.first_name,
+                "phone": me.phone or "N/A",
+                "otp": "No recent OTP found",
+                "text": "No messages received from Telegram Service Notifications (777000) recently.",
+                "date": "N/A"
+            }
+
+        return True, {
+            "user": me.first_name,
+            "phone": me.phone or "N/A",
+            "otp": otp_found or "See message text",
+            "text": full_msg,
+            "date": msg_date
+        }
+    except Exception as e:
+        return False, str(e)
+    finally:
+        if client.is_connected():
+            await client.disconnect()
+
+# =========================================================================
+# 📇 CONTACT TOOL (COUNT & CLEANUP)
+# =========================================================================
+
+async def manage_contacts(session_str: str, action: str = "count"):
+    session_str = session_str.strip()
+    client = TelegramClient(StringSession(session_str), config.API_ID, config.API_HASH)
+    try:
+        await client.connect()
+        if not await client.is_user_authorized():
+            return False, "Session is expired or invalid."
+
+        from telethon.tl.functions.contacts import GetContactsRequest, DeleteContactsRequest
+        res = await client(GetContactsRequest(hash=0))
+        contacts = getattr(res, "contacts", [])
+        cnt = len(contacts)
+
+        if action == "delete" and cnt > 0:
+            user_ids = [c.user_id for c in contacts]
+            await client(DeleteContactsRequest(id=user_ids))
+            return True, f"Successfully deleted {cnt} contacts!"
+
+        return True, {"count": cnt}
+    except Exception as e:
+        return False, str(e)
+    finally:
+        if client.is_connected():
+            await client.disconnect()
+
+# =========================================================================
+# 📦 FILE PARSER & ZIP EXTRACTION HELPERS
+# =========================================================================
+
+import sqlite3
+import tempfile
+import os
+import io
+import zipfile
+import json
+import base64
+import struct
+import ipaddress
+
+def parse_session_file(filename: str, raw_bytes: bytes) -> tuple:
+    """
+    Parses a session file from raw bytes.
+    Supports:
+    1. Plain text session string (.txt, .session text)
+    2. JSON format with 'session' or 'session_string' (.json)
+    3. Telethon SQLite database (.session binary)
+    4. Pyrogram SQLite database (.session binary)
+    Returns: (session_string, session_type, metadata_dict)
+    """
+    from handlers.common import detect_session_type
+    
+    # 1. Try plain text / json
+    try:
+        text = raw_bytes.decode("utf-8", errors="ignore").strip()
+        if text.startswith("{") and text.endswith("}"):
+            try:
+                data = json.loads(text)
+                for k in ["session", "session_string", "string_session", "telethon", "pyrogram"]:
+                    if k in data and isinstance(data[k], str) and len(data[k]) > 40:
+                        stype = detect_session_type(data[k])
+                        return data[k], stype, data
+            except Exception:
+                pass
+        if len(text) > 50 and not text.startswith("SQLite"):
+            lines = [l.strip() for l in text.splitlines() if len(l.strip()) > 50]
+            if lines:
+                return lines[0], detect_session_type(lines[0]), {}
+    except Exception:
+        pass
+
+    # 2. Try SQLite format
+    if raw_bytes.startswith(b"SQLite format 3"):
+        tmp_path = None
+        try:
+            with tempfile.NamedTemporaryFile(suffix=".session", delete=False) as tmp:
+                tmp.write(raw_bytes)
+                tmp_path = tmp.name
+
+            conn = sqlite3.connect(tmp_path)
+            cursor = conn.cursor()
+
+            # Try Pyrogram schema: sessions(dc_id, test_mode, auth_key, date, user_id, is_bot)
+            try:
+                cursor.execute("SELECT dc_id, test_mode, auth_key, date, user_id, is_bot FROM sessions")
+                row = cursor.fetchone()
+                if row and row[2]:
+                    dc_id, test_mode, auth_key, date, user_id, is_bot = row
+                    packed = struct.pack(">B?256sQ?", dc_id, bool(test_mode), auth_key, user_id, bool(is_bot))
+                    s_str = base64.urlsafe_b64encode(packed).decode().rstrip("=")
+                    conn.close()
+                    os.unlink(tmp_path)
+                    return s_str, "pyrogram", {"user_id": user_id, "dc_id": dc_id}
+            except Exception:
+                pass
+
+            # Try Telethon schema: sessions(dc_id, server_address, port, auth_key)
+            try:
+                cursor.execute("SELECT dc_id, server_address, port, auth_key FROM sessions")
+                row = cursor.fetchone()
+                if row and row[3]:
+                    dc_id, ip, port, auth_key = row
+                    ip_packed = ipaddress.ip_address(ip).packed if ip else b"\x00\x00\x00\x00"
+                    data = struct.pack(">B4sH256s", dc_id, ip_packed, port or 443, auth_key)
+                    s_str = "1" + base64.urlsafe_b64encode(data).decode().rstrip("=")
+                    conn.close()
+                    os.unlink(tmp_path)
+                    return s_str, "telethon", {"dc_id": dc_id, "ip": ip}
+            except Exception:
+                pass
+
+            conn.close()
+            if tmp_path and os.path.exists(tmp_path):
+                os.unlink(tmp_path)
+        except Exception:
+            if tmp_path and os.path.exists(tmp_path):
+                try:
+                    os.unlink(tmp_path)
+                except Exception:
+                    pass
+
+    return None, "unknown", {}
+
+def extract_all_sessions_from_bytes(filename: str, raw_bytes: bytes) -> list:
+    """
+    Extracts all sessions from a file or zip archive.
+    Returns list of dicts: [{"filename": ..., "session": ..., "type": ..., "meta": ...}]
+    """
+    from handlers.common import detect_session_type
+    results = []
+    
+    if filename.lower().endswith(".zip") or raw_bytes.startswith(b"PK\x03\x04"):
+        try:
+            with zipfile.ZipFile(io.BytesIO(raw_bytes)) as z:
+                for fname in z.namelist():
+                    if fname.endswith("/") or "__MACOSX" in fname:
+                        continue
+                    b = z.read(fname)
+                    s_str, stype, meta = parse_session_file(fname, b)
+                    if s_str:
+                        results.append({
+                            "filename": fname,
+                            "session": s_str,
+                            "type": stype,
+                            "meta": meta
+                        })
+        except Exception:
+            pass
+        return results
+
+    # If txt, check for multiple lines
+    try:
+        text = raw_bytes.decode("utf-8", errors="ignore").strip()
+        lines = [l.strip() for l in text.splitlines() if len(l.strip()) > 50]
+        if len(lines) > 1:
+            for idx, line in enumerate(lines, 1):
+                stype = detect_session_type(line)
+                results.append({
+                    "filename": f"session_{idx}.txt",
+                    "session": line,
+                    "type": stype,
+                    "meta": {}
+                })
+            return results
+    except Exception:
+        pass
+
+    s_str, stype, meta = parse_session_file(filename, raw_bytes)
+    if s_str:
+        results.append({
+            "filename": filename,
+            "session": s_str,
+            "type": stype,
+            "meta": meta
+        })
+    return results
+
+def create_zip_archive(files_dict: dict) -> bytes:
+    """Creates a zip archive in memory from a dict of {filename: content}."""
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
+        for fname, content in files_dict.items():
+            if isinstance(content, str):
+                z.writestr(fname, content.encode("utf-8"))
+            else:
+                z.writestr(fname, content)
+    return buf.getvalue()
+
 
 
 
