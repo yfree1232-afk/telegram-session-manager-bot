@@ -1,4 +1,4 @@
-﻿from aiogram.fsm.state import State, StatesGroup
+from aiogram.fsm.state import State, StatesGroup
 
 class GenerateStates(StatesGroup):
     waiting_custom_api_id = State()
@@ -16,6 +16,16 @@ class VaultStates(StatesGroup):
 class ToolStates(StatesGroup):
     waiting_leave_session = State()
     waiting_health_session = State()
+    waiting_spambot_session = State()
+    waiting_delete_dialogs_session = State()
+
+class VCStates(StatesGroup):
+    waiting_vc_msg = State()
+    waiting_vc_chat = State()
+
+class BroadcastStates(StatesGroup):
+    waiting_broadcast_text = State()
 
 class AdminStates(StatesGroup):
     waiting_broadcast_msg = State()
+
