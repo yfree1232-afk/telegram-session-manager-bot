@@ -1,4 +1,4 @@
-﻿import io
+import io
 from aiogram import Router, F
 from aiogram.fsm.context import FSMContext
 from aiogram.types import (
@@ -6,7 +6,7 @@ from aiogram.types import (
     BufferedInputFile
 )
 from database.db import db
-from helpers.keyboard import cancel_keyboard, back_to_main_keyboard
+from helpers.keyboard import cancel_keyboard, back_to_main_keyboard, account_detail_keyboard
 from helpers.states import VaultStates
 from helpers.session_tools import check_session_health
 from handlers.common import detect_session_type
@@ -68,19 +68,7 @@ async def cb_manage_acc(query: CallbackQuery):
 📅 <b>Added On:</b> <code>{acc['created_at'][:10]}</code>
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
-    buttons = [
-        [
-            InlineKeyboardButton(text="🔍 ᴄʜᴇᴄᴋ sᴛᴀᴛᴜs (ᴀʟɪᴠᴇ/ᴅᴇᴀᴅ)", callback_data=f"check_acc_status_{acc_id}"),
-            InlineKeyboardButton(text="📱 ᴠɪᴇᴡ ᴅᴇᴠɪᴄᴇs", callback_data=f"seldev_acc_{acc_id}")
-        ],
-        [
-            InlineKeyboardButton(text="🗑️ ᴅᴇʟᴇᴛᴇ ғʀᴏᴍ ᴠᴀᴜʟᴛ", callback_data=f"del_acc_confirm_{acc_id}")
-        ],
-        [
-            InlineKeyboardButton(text="🔙 ʙᴀᴄᴋ ᴛᴏ ᴠᴀᴜʟᴛ", callback_data="menu_vault")
-        ]
-    ]
-    await query.message.edit_text(text, reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons))
+    await query.message.edit_text(text, reply_markup=account_detail_keyboard(acc_id))
 
 @router.callback_query(F.data.startswith("check_acc_status_"))
 async def cb_check_status(query: CallbackQuery):
