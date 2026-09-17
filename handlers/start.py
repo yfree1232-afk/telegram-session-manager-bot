@@ -1,4 +1,4 @@
-﻿from aiogram import Router, F
+from aiogram import Router, F
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message, CallbackQuery
@@ -15,10 +15,11 @@ async def cmd_start(message: Message, state: FSMContext):
     await cleanup_user_login(message.from_user.id)
     user = message.from_user
     await db.add_user(user.id, user.first_name, user.username)
+    acc_count = await db.count_user_accounts(user.id)
 
     await message.answer(
         START_TEXT.format(name=user.first_name),
-        reply_markup=main_menu_keyboard(config.OWNER_ID, user.id),
+        reply_markup=main_menu_keyboard(config.OWNER_ID, user.id, acc_count),
         disable_web_page_preview=True
     )
 
@@ -32,9 +33,10 @@ async def cb_back_main(query: CallbackQuery, state: FSMContext):
     await state.clear()
     await cleanup_user_login(query.from_user.id)
     user = query.from_user
+    acc_count = await db.count_user_accounts(user.id)
     await query.message.edit_text(
         START_TEXT.format(name=user.first_name),
-        reply_markup=main_menu_keyboard(config.OWNER_ID, user.id),
+        reply_markup=main_menu_keyboard(config.OWNER_ID, user.id, acc_count),
         disable_web_page_preview=True
     )
 
@@ -47,8 +49,11 @@ async def cb_cancel_action(query: CallbackQuery, state: FSMContext):
     await state.clear()
     await cleanup_user_login(query.from_user.id)
     await query.answer("Operation cancelled ❌", show_alert=False)
+    user = query.from_user
+    acc_count = await db.count_user_accounts(user.id)
     await query.message.edit_text(
-        START_TEXT.format(name=query.from_user.first_name),
-        reply_markup=main_menu_keyboard(config.OWNER_ID, query.from_user.id),
+        START_TEXT.format(name=user.first_name),
+        reply_markup=main_menu_keyboard(config.OWNER_ID, user.id, acc_count),
         disable_web_page_preview=True
     )
+
