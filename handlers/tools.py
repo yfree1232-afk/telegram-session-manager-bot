@@ -1,4 +1,4 @@
-﻿from aiogram import Router, F
+from aiogram import Router, F
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
 from database.db import db
@@ -147,3 +147,180 @@ async def process_quick_health(message: Message, state: FSMContext):
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
     await check_msg.edit_text(res_text, reply_markup=back_to_main_keyboard())
+
+# =========================================================================
+# 🗑️ DELETE ALL DIALOGS (CLEAN ACCOUNT)
+# =========================================================================
+
+@router.callback_query(F.data == "tool_delete_dialogs")
+async def cb_tool_delete_dialogs(query: CallbackQuery, state: FSMContext):
+    text = """
+🗑️ <b>DELETE ALL DIALOGS & PRIVATE CHATS</b>
+
+Aap session string paste karna chahte hain ya apne saved vault se select karna chahte hain?
+"""
+    await query.message.edit_text(text, reply_markup=session_source_keyboard("deldialogs"))
+
+@router.callback_query(F.data == "src_paste_deldialogs")
+async def cb_paste_deldialogs(query: CallbackQuery, state: FSMContext):
+    await state.set_state(ToolStates.waiting_delete_dialogs_session)
+    await query.message.edit_text(
+        "📝 <b>Send String Session to clear all private chats/dialogs:</b>\n\n"
+        "<i>(Session will be deleted immediately for privacy)</i>\n\n"
+        "Send /cancel to abort.",
+        reply_markup=cancel_keyboard()
+    )
+
+@router.message(ToolStates.waiting_delete_dialogs_session)
+async def process_delete_dialogs_session(message: Message, state: FSMContext):
+    if message.text and message.text.strip().lower() == "/cancel":
+        await state.clear()
+        await message.reply("Cancelled.", reply_markup=back_to_main_keyboard())
+        return
+
+    raw_session = message.text.strip()
+    try:
+        await message.delete()
+    except Exception:
+        pass
+    await state.clear()
+
+    prog_msg = await message.answer("⏳ <i>Deleting private chats and dialogs... Please wait.</i>")
+    from helpers.session_tools import delete_all_dialogs
+    success, res = await delete_all_dialogs(raw_session)
+    if success:
+        await prog_msg.edit_text(f"🎉 <b>CLEANUP COMPLETE!</b>\n\n✅ {res}", reply_markup=back_to_main_keyboard())
+    else:
+        await prog_msg.edit_text(f"❌ <b>Failed:</b> <code>{res}</code>", reply_markup=back_to_main_keyboard())
+
+@router.callback_query(F.data == "src_vault_deldialogs")
+async def cb_vault_deldialogs(query: CallbackQuery):
+    user_id = query.from_user.id
+    accounts = await db.get_user_accounts(user_id)
+    if not accounts:
+        await query.answer("Aapke vault me koi account nahi hai!", show_alert=True)
+        return
+
+    buttons = []
+    for acc in accounts:
+        btn_text = f"👤 {acc['account_name']} ({acc['session_type'].capitalize()})"
+        buttons.append([InlineKeyboardButton(text=btn_text, callback_data=f"seldeldia_acc_{acc['id']}")])
+    buttons.append([InlineKeyboardButton(text="🔙 Back", callback_data="menu_tools")])
+
+    await query.message.edit_text("💼 <b>Select an account:</b>", reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons))
+
+@router.callback_query(F.data.startswith("seldeldia_acc_"))
+async def cb_seldeldia_exec(query: CallbackQuery):
+    acc_id = int(query.data.split("_")[2])
+    user_id = query.from_user.id
+    account = await db.get_account(acc_id, user_id)
+    if not account:
+        await query.answer("Account not found!", show_alert=True)
+        return
+
+    prog_msg = await query.message.edit_text("⏳ <i>Deleting private chats and dialogs...</i>")
+    from helpers.session_tools import delete_all_dialogs
+    success, res = await delete_all_dialogs(account["raw_session"])
+    if success:
+        await prog_msg.edit_text(f"🎉 <b>CLEANUP COMPLETE!</b>\n\n✅ {res}", reply_markup=back_to_main_keyboard())
+    else:
+        await prog_msg.edit_text(f"❌ <b>Failed:</b> <code>{res}</code>", reply_markup=back_to_main_keyboard())
+
+# =========================================================================
+# 🛡️ CHECK SPAMBOT / BAN STATUS
+# =========================================================================
+
+@router.callback_query(F.data == "tool_check_spambot")
+async def cb_tool_spambot(query: CallbackQuery, state: FSMContext):
+    text = """
+🛡️ <b>CHECK BAN & SPAMBOT STATUS</b>
+
+Aap session string paste karna chahte hain ya apne saved vault se select karna chahte hain?
+"""
+    await query.message.edit_text(text, reply_markup=session_source_keyboard("spambot"))
+
+@router.callback_query(F.data == "src_paste_spambot")
+async def cb_paste_spambot(query: CallbackQuery, state: FSMContext):
+    await state.set_state(ToolStates.waiting_spambot_session)
+    await query.message.edit_text(
+        "📝 <b>Send String Session to check SpamBot limitation:</b>\n\n"
+        "<i>(Session will be deleted immediately for privacy)</i>\n\n"
+        "Send /cancel to abort.",
+        reply_markup=cancel_keyboard()
+    )
+
+@router.message(ToolStates.waiting_spambot_session)
+async def process_spambot_session(message: Message, state: FSMContext):
+    if message.text and message.text.strip().lower() == "/cancel":
+        await state.clear()
+        await message.reply("Cancelled.", reply_markup=back_to_main_keyboard())
+        return
+
+    raw_session = message.text.strip()
+    try:
+        await message.delete()
+    except Exception:
+        pass
+    await state.clear()
+
+    prog_msg = await message.answer("🔄 <i>Querying @SpamBot... Please wait.</i>")
+    from helpers.session_tools import check_spambot_status
+    success, res = await check_spambot_status(raw_session)
+    if success:
+        clean_status = "🟢 <b>CLEAN / NO LIMITS!</b>" if res.get("clean") else "🔴 <b>LIMITED / RESTRICTED!</b>"
+        msg_text = f"""
+🛡️ <b>SPAMBOT CHECK RESULT</b>
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📊 <b>Status:</b> {clean_status}
+📝 <b>Telegram SpamBot Response:</b>
+<blockquote>{res.get('message', '')}</blockquote>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+"""
+        await prog_msg.edit_text(msg_text, reply_markup=back_to_main_keyboard())
+    else:
+        await prog_msg.edit_text(f"❌ <b>Error checking SpamBot:</b> <code>{res}</code>", reply_markup=back_to_main_keyboard())
+
+@router.callback_query(F.data == "src_vault_spambot")
+async def cb_vault_spambot(query: CallbackQuery):
+    user_id = query.from_user.id
+    accounts = await db.get_user_accounts(user_id)
+    if not accounts:
+        await query.answer("Aapke vault me koi account nahi hai!", show_alert=True)
+        return
+
+    buttons = []
+    for acc in accounts:
+        btn_text = f"👤 {acc['account_name']} ({acc['session_type'].capitalize()})"
+        buttons.append([InlineKeyboardButton(text=btn_text, callback_data=f"selspam_acc_{acc['id']}")])
+    buttons.append([InlineKeyboardButton(text="🔙 Back", callback_data="menu_tools")])
+
+    await query.message.edit_text("💼 <b>Select an account:</b>", reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons))
+
+@router.callback_query(F.data.startswith("selspam_acc_"))
+async def cb_selspam_exec(query: CallbackQuery):
+    acc_id = int(query.data.split("_")[2])
+    user_id = query.from_user.id
+    account = await db.get_account(acc_id, user_id)
+    if not account:
+        await query.answer("Account not found!", show_alert=True)
+        return
+
+    prog_msg = await query.message.edit_text("🔄 <i>Querying @SpamBot...</i>")
+    from helpers.session_tools import check_spambot_status
+    success, res = await check_spambot_status(account["raw_session"])
+    if success:
+        clean_status = "🟢 <b>CLEAN / NO LIMITS!</b>" if res.get("clean") else "🔴 <b>LIMITED / RESTRICTED!</b>"
+        msg_text = f"""
+🛡️ <b>SPAMBOT CHECK RESULT: {account['account_name']}</b>
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📊 <b>Status:</b> {clean_status}
+📝 <b>Telegram SpamBot Response:</b>
+<blockquote>{res.get('message', '')}</blockquote>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+"""
+        await prog_msg.edit_text(msg_text, reply_markup=back_to_main_keyboard())
+    else:
+        await prog_msg.edit_text(f"❌ <b>Error checking SpamBot:</b> <code>{res}</code>", reply_markup=back_to_main_keyboard())
+
