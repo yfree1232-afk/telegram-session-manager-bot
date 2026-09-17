@@ -18,12 +18,53 @@ from telethon.errors import (
     UserDeactivatedError, SessionRevokedError, AuthKeyUnregisteredError,
     SessionPasswordNeededError
 )
-import config
+from telethon.sessions.string import StringSession, CURRENT_VERSION, _STRUCT_PREFORMAT
+import ipaddress
+import base64
+import struct
+
+def to_telethon_session(session_str: str) -> str:
+    """Converts Pyrogram (v2) string or raw session to valid Telethon StringSession."""
+    s = session_str.strip()
+    if s.startswith("1") and len(s) > 200:
+        return s
+    try:
+        pad = len(s) % 4
+        s_padded = s + ("=" * (4 - pad) if pad else "")
+        raw_bytes = base64.urlsafe_b64decode(s_padded)
+        dc_id, test_mode, auth_key, user_id, is_bot = struct.unpack(">B?256sQ?", raw_bytes[:267])
+        dc_ips = {
+            1: "149.154.175.50",
+            2: "149.154.167.51",
+            3: "149.154.175.100",
+            4: "149.154.167.91",
+            5: "91.108.56.165"
+        }
+        ip = dc_ips.get(dc_id, "149.154.167.51")
+        ip_bytes = ipaddress.ip_address(ip).packed
+        data_bytes = struct.pack(_STRUCT_PREFORMAT.format(len(ip_bytes)), dc_id, ip_bytes, 443, auth_key)
+        return CURRENT_VERSION + StringSession.encode(data_bytes)
+    except Exception:
+        return s
+
+def to_pyrogram_session(session_str: str) -> str:
+    """Converts Telethon StringSession to valid Pyrogram (v2) session string."""
+    s = session_str.strip()
+    if not (s.startswith("1") and len(s) > 200):
+        return s
+    try:
+        sess = StringSession(s)
+        auth_bytes = sess.auth_key.key
+        dc_id = sess.dc_id
+        packed = struct.pack(">B?256sQ?", dc_id, False, auth_bytes, 0, False)
+        return base64.urlsafe_b64encode(packed).decode().rstrip("=")
+    except Exception:
+        return s
 
 async def check_session_health(session_str: str, session_type: str = "pyrogram"):
     """
     Check if a string session is alive, banned, or expired.
-    Returns a dict with health details.
+    Universal adapter supporting both Pyrogram and Telethon formats.
     """
     session_str = session_str.strip()
     result = {
@@ -37,77 +78,46 @@ async def check_session_health(session_str: str, session_type: str = "pyrogram")
         "error": None
     }
 
-    if session_type.lower() == "pyrogram":
-        client = Client(
-            name="temp_check",
-            api_id=config.API_ID,
-            api_hash=config.API_HASH,
-            session_string=session_str,
-            in_memory=True
-        )
-        try:
-            await client.connect()
-            me = await client.get_me()
-            result["status"] = "alive"
-            result["user_id"] = me.id
-            result["name"] = f"{me.first_name or ''} {me.last_name or ''}".strip()
-            result["username"] = me.username
-            result["phone"] = me.phone_number
-            result["dc_id"] = me.dc_id
-            result["is_premium"] = getattr(me, "is_premium", False)
+    tel_str = to_telethon_session(session_str)
+    client = TelegramClient(StringSession(tel_str), config.API_ID, config.API_HASH)
+    try:
+        await client.connect()
+        if not await client.is_user_authorized():
+            result["error"] = "Session Expired or Unauthorized"
+            return result
+        me = await client.get_me()
+        result["status"] = "alive"
+        result["user_id"] = me.id
+        result["name"] = f"{me.first_name or ''} {me.last_name or ''}".strip() or "Telegram User"
+        result["username"] = me.username or "None"
+        result["phone"] = me.phone or "Hidden"
+        result["dc_id"] = getattr(client.session, "dc_id", 1)
+        result["is_premium"] = getattr(me, "premium", False)
+        return result
+    except (UserDeactivatedError, SessionRevokedError, AuthKeyUnregisteredError) as e:
+        result["error"] = f"Account Banned/Terminated: {type(e).__name__}"
+        return result
+    except Exception as e:
+        result["error"] = str(e)
+        return result
+    finally:
+        if client.is_connected():
             await client.disconnect()
-        except (UserDeactivated, SessionRevoked, AuthKeyUnregistered) as e:
-            result["error"] = f"Account Banned/Terminated: {type(e).__name__}"
-        except Exception as e:
-            result["error"] = str(e)
-        finally:
-            if client.is_connected:
-                await client.disconnect()
 
-    else: # Telethon
-        client = TelegramClient(StringSession(session_str), config.API_ID, config.API_HASH)
-        try:
-            await client.connect()
-            if not await client.is_user_authorized():
-                result["error"] = "Session Expired or Unauthorized"
-                return result
-            me = await client.get_me()
-            result["status"] = "alive"
-            result["user_id"] = me.id
-            result["name"] = f"{me.first_name or ''} {me.last_name or ''}".strip()
-            result["username"] = me.username
-            result["phone"] = me.phone
-            result["is_premium"] = getattr(me, "premium", False)
-            await client.disconnect()
-        except (UserDeactivatedError, SessionRevokedError, AuthKeyUnregisteredError) as e:
-            result["error"] = f"Account Banned/Terminated: {type(e).__name__}"
-        except Exception as e:
-            result["error"] = str(e)
-        finally:
-            if client.is_connected():
-                await client.disconnect()
-
-    return result
-
-async def get_active_sessions(session_str: str, session_type: str = "pyrogram"):
+async def get_active_sessions(session_str: str, session_type: str = "telethon"):
     """
     Fetch all active authorizations/devices for a Telegram account.
+    Supports both Pyrogram and Telethon session strings.
     """
     sessions_list = []
     session_str = session_str.strip()
-
-    if session_type.lower() == "pyrogram":
-        client = Client(
-            name="temp_auth",
-            api_id=config.API_ID,
-            api_hash=config.API_HASH,
-            session_string=session_str,
-            in_memory=True
-        )
-        try:
-            await client.connect()
-            auths = await client.invoke(raw.functions.account.GetAuthorizations())
-            for auth in auths.authorizations:
+    tel_str = to_telethon_session(session_str)
+    client = TelegramClient(StringSession(tel_str), config.API_ID, config.API_HASH)
+    try:
+        await client.connect()
+        if await client.is_user_authorized():
+            result = await client(GetAuthorizationsRequest())
+            for auth in result.authorizations:
                 sessions_list.append({
                     "hash": auth.hash,
                     "device_model": auth.device_model,
@@ -115,168 +125,89 @@ async def get_active_sessions(session_str: str, session_type: str = "pyrogram"):
                     "system_version": auth.system_version,
                     "app_name": auth.app_name,
                     "app_version": auth.app_version,
-                    "date_created": datetime.datetime.fromtimestamp(auth.date_created).strftime("%Y-%m-%d %H:%M"),
-                    "date_active": datetime.datetime.fromtimestamp(auth.date_active).strftime("%Y-%m-%d %H:%M"),
+                    "date_created": auth.date_created.strftime("%Y-%m-%d %H:%M") if hasattr(auth.date_created, "strftime") else str(auth.date_created),
+                    "date_active": auth.date_active.strftime("%Y-%m-%d %H:%M") if hasattr(auth.date_active, "strftime") else str(auth.date_active),
                     "ip": auth.ip,
                     "country": auth.country,
-                    "current": getattr(auth, "current", False) or getattr(auth, "is_current", False)
+                    "current": getattr(auth, "current", False)
                 })
-        finally:
-            if client.is_connected:
-                await client.disconnect()
-
-    else: # Telethon
-        client = TelegramClient(StringSession(session_str), config.API_ID, config.API_HASH)
-        try:
-            await client.connect()
-            if await client.is_user_authorized():
-                result = await client(GetAuthorizationsRequest())
-                for auth in result.authorizations:
-                    sessions_list.append({
-                        "hash": auth.hash,
-                        "device_model": auth.device_model,
-                        "platform": auth.platform,
-                        "system_version": auth.system_version,
-                        "app_name": auth.app_name,
-                        "app_version": auth.app_version,
-                        "date_created": auth.date_created.strftime("%Y-%m-%d %H:%M") if hasattr(auth.date_created, "strftime") else str(auth.date_created),
-                        "date_active": auth.date_active.strftime("%Y-%m-%d %H:%M") if hasattr(auth.date_active, "strftime") else str(auth.date_active),
-                        "ip": auth.ip,
-                        "country": auth.country,
-                        "current": getattr(auth, "current", False)
-                    })
-        finally:
-            if client.is_connected():
-                await client.disconnect()
+    finally:
+        if client.is_connected():
+            await client.disconnect()
 
     return sessions_list
 
-async def terminate_all_sessions(session_str: str, session_type: str = "pyrogram"):
+async def terminate_all_sessions(session_str: str, session_type: str = "telethon"):
     """
     Terminates all active authorizations except the current one.
+    Supports both Pyrogram and Telethon session strings.
     """
     session_str = session_str.strip()
-    if session_type.lower() == "pyrogram":
-        client = Client(
-            name="temp_term",
-            api_id=config.API_ID,
-            api_hash=config.API_HASH,
-            session_string=session_str,
-            in_memory=True
-        )
-        try:
-            await client.connect()
-            await client.invoke(raw.functions.account.ResetAuthorizations())
-            return True, "All other sessions have been successfully terminated! 🚀"
-        except Exception as e:
-            return False, str(e)
-        finally:
-            if client.is_connected:
-                await client.disconnect()
-
-    else: # Telethon
-        client = TelegramClient(StringSession(session_str), config.API_ID, config.API_HASH)
-        try:
-            await client.connect()
-            await client(ResetAuthorizationsRequest())
-            return True, "All other sessions have been successfully terminated! 🚀"
-        except Exception as e:
-            return False, str(e)
-        finally:
-            if client.is_connected():
-                await client.disconnect()
+    tel_str = to_telethon_session(session_str)
+    client = TelegramClient(StringSession(tel_str), config.API_ID, config.API_HASH)
+    try:
+        await client.connect()
+        await client(ResetAuthorizationsRequest())
+        return True, "All other sessions have been successfully terminated! 🚀"
+    except Exception as e:
+        return False, str(e)
+    finally:
+        if client.is_connected():
+            await client.disconnect()
 
 async def terminate_single_session(session_str: str, session_type: str, auth_hash: int):
     """
     Terminates a specific authorization by its hash.
+    Supports both Pyrogram and Telethon session strings.
     """
     session_str = session_str.strip()
-    if session_type.lower() == "pyrogram":
-        client = Client(
-            name="temp_single_term",
-            api_id=config.API_ID,
-            api_hash=config.API_HASH,
-            session_string=session_str,
-            in_memory=True
-        )
-        try:
-            await client.connect()
-            await client.invoke(raw.functions.account.ResetAuthorization(hash=int(auth_hash)))
-            return True, "Session terminated successfully! 🗑️"
-        except Exception as e:
-            return False, str(e)
-        finally:
-            if client.is_connected:
-                await client.disconnect()
-    else:
-        client = TelegramClient(StringSession(session_str), config.API_ID, config.API_HASH)
-        try:
-            await client.connect()
-            await client(ResetAuthorizationRequest(hash=int(auth_hash)))
-            return True, "Session terminated successfully! 🗑️"
-        except Exception as e:
-            return False, str(e)
-        finally:
-            if client.is_connected():
-                await client.disconnect()
+    tel_str = to_telethon_session(session_str)
+    client = TelegramClient(StringSession(tel_str), config.API_ID, config.API_HASH)
+    try:
+        await client.connect()
+        await client(ResetAuthorizationRequest(hash=int(auth_hash)))
+        return True, "Session terminated successfully! 🗑️"
+    except Exception as e:
+        return False, str(e)
+    finally:
+        if client.is_connected():
+            await client.disconnect()
 
-async def leave_all_dialogs(session_str: str, session_type: str = "pyrogram"):
+async def leave_all_dialogs(session_str: str, session_type: str = "telethon"):
     """
     Leave all non-owned channels and supergroups.
+    Supports both Pyrogram and Telethon session strings.
     """
     left_count = 0
     errors = 0
     session_str = session_str.strip()
-
-    if session_type.lower() == "pyrogram":
-        client = Client(
-            name="temp_cleaner",
-            api_id=config.API_ID,
-            api_hash=config.API_HASH,
-            session_string=session_str,
-            in_memory=True
-        )
-        try:
-            await client.connect()
-            async for dialog in client.get_dialogs():
-                chat = dialog.chat
-                if chat.type.value in ["channel", "supergroup", "group"]:
-                    try:
-                        await client.leave_chat(chat.id)
-                        left_count += 1
-                    except Exception:
-                        errors += 1
-            return True, f"Successfully left {left_count} channels/groups! (Skipped/Errors: {errors})"
-        except Exception as e:
-            return False, str(e)
-        finally:
-            if client.is_connected:
-                await client.disconnect()
-    else:
-        client = TelegramClient(StringSession(session_str), config.API_ID, config.API_HASH)
-        try:
-            await client.connect()
-            from telethon.tl.functions.channels import LeaveChannelRequest
-            async for dialog in client.iter_dialogs():
-                if dialog.is_channel or dialog.is_group:
-                    try:
-                        await client(LeaveChannelRequest(dialog.input_entity))
-                        left_count += 1
-                    except Exception:
-                        errors += 1
-            return True, f"Successfully left {left_count} channels/groups! (Skipped/Errors: {errors})"
-        except Exception as e:
-            return False, str(e)
-        finally:
-            if client.is_connected():
-                await client.disconnect()
+    tel_str = to_telethon_session(session_str)
+    client = TelegramClient(StringSession(tel_str), config.API_ID, config.API_HASH)
+    try:
+        await client.connect()
+        from telethon.tl.functions.channels import LeaveChannelRequest
+        async for dialog in client.iter_dialogs():
+            if dialog.is_channel or dialog.is_group:
+                try:
+                    await client(LeaveChannelRequest(dialog.input_entity))
+                    left_count += 1
+                except Exception:
+                    errors += 1
+        return True, f"Successfully left {left_count} channels/groups! (Skipped/Errors: {errors})"
+    except Exception as e:
+        return False, str(e)
+    finally:
+        if client.is_connected():
+            await client.disconnect()
 
 async def check_spambot_status(session_str: str, session_type: str = "telethon"):
     """
     Check if the account is limited or banned by sending /start to @SpamBot.
+    Supports both Pyrogram and Telethon session strings.
     """
     session_str = session_str.strip()
-    client = TelegramClient(StringSession(session_str), config.API_ID, config.API_HASH)
+    tel_str = to_telethon_session(session_str)
+    client = TelegramClient(StringSession(tel_str), config.API_ID, config.API_HASH)
     try:
         await client.connect()
         if not await client.is_user_authorized():
@@ -310,10 +241,12 @@ async def check_spambot_status(session_str: str, session_type: str = "telethon")
 async def delete_all_dialogs(session_str: str, session_type: str = "telethon"):
     """
     Delete all private chats / dialogs from the account.
+    Supports both Pyrogram and Telethon session strings.
     """
     deleted_count = 0
     session_str = session_str.strip()
-    client = TelegramClient(StringSession(session_str), config.API_ID, config.API_HASH)
+    tel_str = to_telethon_session(session_str)
+    client = TelegramClient(StringSession(tel_str), config.API_ID, config.API_HASH)
     try:
         await client.connect()
         if not await client.is_user_authorized():
@@ -337,9 +270,11 @@ async def check_2fa_status(session_str: str, session_type: str = "telethon"):
     """
     Checks if Two-Step Verification (2FA) is active on the account.
     Returns details on 2FA status, hint, and recovery email presence.
+    Supports both Pyrogram and Telethon session strings.
     """
     session_str = session_str.strip()
-    client = TelegramClient(StringSession(session_str), config.API_ID, config.API_HASH)
+    tel_str = to_telethon_session(session_str)
+    client = TelegramClient(StringSession(tel_str), config.API_ID, config.API_HASH)
     try:
         await client.connect()
         if not await client.is_user_authorized():
@@ -367,9 +302,11 @@ async def check_2fa_status(session_str: str, session_type: str = "telethon"):
 async def get_account_full_info(session_str: str, session_type: str = "telethon"):
     """
     Fetches comprehensive account details: Profile, DC, Security, Stats.
+    Supports both Pyrogram and Telethon session strings.
     """
     session_str = session_str.strip()
-    client = TelegramClient(StringSession(session_str), config.API_ID, config.API_HASH)
+    tel_str = to_telethon_session(session_str)
+    client = TelegramClient(StringSession(tel_str), config.API_ID, config.API_HASH)
     try:
         await client.connect()
         if not await client.is_user_authorized():
@@ -537,7 +474,8 @@ def estimate_account_age(user_id: int) -> dict:
 
 async def check_account_privacy(session_str: str):
     session_str = session_str.strip()
-    client = TelegramClient(StringSession(session_str), config.API_ID, config.API_HASH)
+    tel_str = to_telethon_session(session_str)
+    client = TelegramClient(StringSession(tel_str), config.API_ID, config.API_HASH)
     try:
         await client.connect()
         if not await client.is_user_authorized():
@@ -585,64 +523,25 @@ async def convert_session(session_str: str):
     current_type = detect_session_type(session_str)
 
     if current_type == "telethon":
-        client = TelegramClient(StringSession(session_str), config.API_ID, config.API_HASH)
-        try:
-            await client.connect()
-            if not await client.is_user_authorized():
-                return False, "Telethon session is expired or invalid"
-            me = await client.get_me()
-
-            import struct
-            import base64
-            auth_bytes = client.session.auth_key.key
-            dc_id = client.session.dc_id
-            packed = struct.pack(">B?256sQ?", dc_id, False, auth_bytes, me.id, False)
-            pyro_string = base64.urlsafe_b64encode(packed).decode().rstrip("=")
-
-            return True, {
-                "from_type": "TELETHON",
-                "to_type": "PYROGRAM (v2)",
-                "result": pyro_string,
-                "user": me.first_name,
-                "phone": me.phone
-            }
-        except Exception as e:
-            return False, str(e)
-        finally:
-            if client.is_connected():
-                await client.disconnect()
+        pyro_string = to_pyrogram_session(session_str)
+        health = await check_session_health(session_str, "telethon")
+        return True, {
+            "from_type": "TELETHON",
+            "to_type": "PYROGRAM (v2)",
+            "result": pyro_string,
+            "user": health.get("name", "Telegram User"),
+            "phone": health.get("phone", "N/A")
+        }
     else:
-        # Pyrogram to Telethon
-        try:
-            import base64
-            import struct
-            import ipaddress
-            pad = len(session_str) % 4
-            s_padded = session_str + ("=" * (4 - pad) if pad else "")
-            raw_bytes = base64.urlsafe_b64decode(s_padded)
-            dc_id, test_mode, auth_key, user_id, is_bot = struct.unpack(">B?256sQ?", raw_bytes[:267])
-
-            dc_ips = {
-                1: "149.154.175.50",
-                2: "149.154.167.51",
-                3: "149.154.175.100",
-                4: "149.154.167.91",
-                5: "91.108.56.165"
-            }
-            ip = dc_ips.get(dc_id, "149.154.167.51")
-            ip_bytes = ipaddress.ip_address(ip).packed
-            data_bytes = struct.pack(">B4sH256s", dc_id, ip_bytes, 443, auth_key)
-            telethon_string = "1" + base64.urlsafe_b64encode(data_bytes).decode().rstrip("=")
-
-            return True, {
-                "from_type": "PYROGRAM (v2)",
-                "to_type": "TELETHON",
-                "result": telethon_string,
-                "user": f"User {user_id}",
-                "phone": "Extracted"
-            }
-        except Exception as e:
-            return False, str(e)
+        telethon_string = to_telethon_session(session_str)
+        health = await check_session_health(session_str, "pyrogram")
+        return True, {
+            "from_type": "PYROGRAM (v2)",
+            "to_type": "TELETHON",
+            "result": telethon_string,
+            "user": health.get("name", "Telegram User"),
+            "phone": health.get("phone", "N/A")
+        }
 
 # =========================================================================
 # 📩 READ OTP (TELEGRAM OFFICIAL 777000 NOTIFICATIONS)
@@ -651,7 +550,8 @@ async def convert_session(session_str: str):
 async def read_latest_otp(session_str: str, session_type: str = "telethon"):
     """Fetch the latest login OTP sent to the account by Telegram (from 777000)."""
     session_str = session_str.strip()
-    client = TelegramClient(StringSession(session_str), config.API_ID, config.API_HASH)
+    tel_str = to_telethon_session(session_str)
+    client = TelegramClient(StringSession(tel_str), config.API_ID, config.API_HASH)
     try:
         await client.connect()
         if not await client.is_user_authorized():
@@ -703,7 +603,8 @@ async def read_latest_otp(session_str: str, session_type: str = "telethon"):
 
 async def manage_contacts(session_str: str, action: str = "count"):
     session_str = session_str.strip()
-    client = TelegramClient(StringSession(session_str), config.API_ID, config.API_HASH)
+    tel_str = to_telethon_session(session_str)
+    client = TelegramClient(StringSession(tel_str), config.API_ID, config.API_HASH)
     try:
         await client.connect()
         if not await client.is_user_authorized():
