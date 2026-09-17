@@ -1,24 +1,28 @@
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 def main_menu_keyboard(owner_id: int = 0, user_id: int = 0, accounts_count: int = 0) -> InlineKeyboardMarkup:
-    """Aesthetic Main Menu Keyboard with Bot API 9.4 colorful button styles."""
+    """Aesthetic ICE BOT Main Menu with Bot API 9.4 colorful button styles."""
     buttons = [
         [
             InlineKeyboardButton(text="⚡ ɢᴇɴᴇʀᴀᴛᴇ sᴇssɪᴏɴ (ᴘʏʀᴏɢʀᴀᴍ & ᴛᴇʟᴇᴛʜᴏɴ) ⚡", callback_data="menu_generate", style="primary")
         ],
         [
-            InlineKeyboardButton(text="🎙️ ᴠᴄ ᴀᴜᴛᴏ-ᴅᴍ & ʟɪᴠᴇ ʙʟᴀsᴛᴇʀ", callback_data="menu_vc", style="success")
+            InlineKeyboardButton(text="📱 ᴀᴄᴛɪᴠᴇ ᴅᴇᴠɪᴄᴇs", callback_data="menu_devices", style="primary"),
+            InlineKeyboardButton(text=f"💼 sᴀᴠᴇᴅ ᴀᴄᴄᴏᴜɴᴛs ({accounts_count})", callback_data="menu_vault", style="primary")
         ],
         [
-            InlineKeyboardButton(text="📱 ᴀᴄᴛɪᴠᴇ ᴅᴇᴠɪᴄᴇs & sᴇᴄᴜʀɪᴛʏ", callback_data="menu_devices", style="primary"),
-            InlineKeyboardButton(text=f"👥 ᴍʏ ᴀᴄᴄᴏᴜɴᴛs ({accounts_count})", callback_data="menu_vault", style="primary")
+            InlineKeyboardButton(text="🛡️ sᴘᴀᴍʙᴏᴛ sᴛᴀᴛᴜs", callback_data="tool_check_spambot", style="success"),
+            InlineKeyboardButton(text="🔐 𝟸ғᴀ sᴇᴄᴜʀɪᴛʏ ᴄʜᴇᴄᴋ", callback_data="tool_check_2fa", style="primary")
         ],
         [
-            InlineKeyboardButton(text="📡 ᴍᴜʟᴛɪ-ᴀᴄᴄᴏᴜɴᴛ ʙʀᴏᴀᴅᴄᴀsᴛ", callback_data="menu_broadcast", style="primary"),
-            InlineKeyboardButton(text="🛠️ ᴜᴛɪʟɪᴛʏ ᴛᴏᴏʟs", callback_data="menu_tools", style="default")
+            InlineKeyboardButton(text="🚪 ʟᴇᴀᴠᴇ ᴀʟʟ ᴄʜᴀᴛs", callback_data="tool_leave_chats", style="danger"),
+            InlineKeyboardButton(text="🗑️ ᴅᴇʟᴇᴛᴇ ᴀʟʟ ᴅɪᴀʟᴏɢs", callback_data="tool_delete_dialogs", style="danger")
         ],
         [
-            InlineKeyboardButton(text="🔄 ᴘɪɴɢ ᴀʟʟ ᴀᴄᴄᴏᴜɴᴛs", callback_data="vault_check_all", style="success"),
+            InlineKeyboardButton(text="👤 ᴀᴄᴄᴏᴜɴᴛ ɪɴғᴏ", callback_data="tool_acc_info", style="primary"),
+            InlineKeyboardButton(text="🔄 ᴄʜᴇᴄᴋ ᴀʟʟ ʜᴇᴀʟᴛʜ", callback_data="vault_check_all", style="success")
+        ],
+        [
             InlineKeyboardButton(text="ℹ️ ʜᴇʟᴘ & ɢᴜɪᴅᴇ", callback_data="menu_help", style="default")
         ]
     ]
@@ -110,165 +114,28 @@ def tools_menu_keyboard() -> InlineKeyboardMarkup:
         ]
     ])
 
-def vc_dashboard_keyboard(user_data: dict | None = None) -> InlineKeyboardMarkup:
-    """Voice Chat (VC) Auto-DM configuration keyboard with colorful styles."""
-    delay = user_data.get("vc_delay", 2.5) if user_data else 2.5
-    is_auto_on = bool(user_data and user_data.get("vc_auto_send") == 1)
-
-    if is_auto_on:
-        auto_toggle_text = "⚡ Real-Time Auto-DM: 🟢 ON (Running)"
-        auto_style = "success"
-    else:
-        auto_toggle_text = "⚡ Real-Time Auto-DM: 🔴 OFF (Click to ON)"
-        auto_style = "danger"
-
-    buttons = [
-        [
-            InlineKeyboardButton(text=auto_toggle_text, callback_data="vc_toggle_auto", style=auto_style)
-        ],
-        [
-            InlineKeyboardButton(text="🎛️ Select Sender Accounts (ON/OFF)", callback_data="vc_select_accounts", style="primary")
-        ],
-        [
-            InlineKeyboardButton(text="🔍 Auto-Detect Live VCs (1-Click)", callback_data="vc_auto_detect", style="primary"),
-            InlineKeyboardButton(text="🚀 Send Manual Link", callback_data="vc_send_blast", style="primary")
-        ],
-        [
-            InlineKeyboardButton(text="✍️ Edit VC Custom Message", callback_data="vc_edit_msg", style="primary"),
-            InlineKeyboardButton(text=f"⏱️ Delay: {delay}s", callback_data="vc_delay_menu", style="default")
-        ],
-        [
-            InlineKeyboardButton(text="📊 VC Sent Stats", callback_data="vc_stats", style="default"),
-            InlineKeyboardButton(text="🔄 Reset VC Message", callback_data="vc_reset_msg", style="danger")
-        ],
-        [
-            InlineKeyboardButton(text="🔙 Back to Main Dashboard", callback_data="back_main", style="default")
-        ]
-    ]
-    return InlineKeyboardMarkup(inline_keyboard=buttons)
-
-def account_toggle_switch_keyboard(accounts: list[dict]) -> InlineKeyboardMarkup:
-    """Generate 1-click ON/OFF toggle switch list for all connected accounts."""
-    buttons = []
-    if not accounts:
-        buttons.append([
-            InlineKeyboardButton(text="➕ Koi Account nahi mila. Add Karein!", callback_data="vault_add_acc", style="success")
-        ])
-    else:
-        for acc in accounts:
-            db_id = acc["id"]
-            phone = acc.get("phone_number") or acc.get("phone", "Unknown")
-            name = acc.get("first_name", "") or acc.get("account_name", "") or "User"
-            is_active = acc.get("is_active", 1)
-
-            if is_active == 1:
-                btn_text = f"🟢 {phone} ({name[:10]}) ➔ [ON]"
-                btn_style = "success"
-            else:
-                btn_text = f"🔴 {phone} ({name[:10]}) ➔ [OFF]"
-                btn_style = "danger"
-
-            buttons.append([
-                InlineKeyboardButton(text=btn_text, callback_data=f"acc_quick_toggle_{db_id}", style=btn_style)
-            ])
-
-        buttons.append([
-            InlineKeyboardButton(text="🟢 Enable All (Sab ON)", callback_data="acc_toggle_all_1", style="success"),
-            InlineKeyboardButton(text="🔴 Disable All (Sab OFF)", callback_data="acc_toggle_all_0", style="danger")
-        ])
-
-    buttons.append([
-        InlineKeyboardButton(text="🔙 Back to VC Dashboard", callback_data="menu_vc", style="default")
-    ])
-    return InlineKeyboardMarkup(inline_keyboard=buttons)
-
-def detected_vcs_keyboard(vcs: list[dict]) -> InlineKeyboardMarkup:
-    """Keyboard listing auto-detected live Voice Chats."""
-    buttons = []
-    if not vcs:
-        buttons.append([
-            InlineKeyboardButton(text="⚠️ Koi Live VC nahi mila", callback_data="vc_auto_detect", style="default")
-        ])
-    else:
-        for v in vcs:
-            cid = str(v.get("id"))
-            title = v.get("title", "Voice Chat")
-            if len(title) > 20:
-                title = title[:20] + ".."
-            p_cnt = v.get("participants_count", 0)
-            btn_text = f"🎙️ {title} ({p_cnt} in VC)"
-            buttons.append([
-                InlineKeyboardButton(text=btn_text, callback_data=f"vc_blast_target_{cid}", style="success")
-            ])
-
-    buttons.append([
-        InlineKeyboardButton(text="🔄 Scan Again", callback_data="vc_auto_detect", style="primary"),
-        InlineKeyboardButton(text="🔗 Enter Link Manually", callback_data="vc_send_blast", style="primary")
-    ])
-    buttons.append([
-        InlineKeyboardButton(text="🔙 Back to VC Dashboard", callback_data="menu_vc", style="default")
-    ])
-    return InlineKeyboardMarkup(inline_keyboard=buttons)
-
-def vc_delay_keyboard() -> InlineKeyboardMarkup:
-    """Anti-ban delay selector."""
+def account_detail_keyboard(db_id: int) -> InlineKeyboardMarkup:
+    """Detailed management options for a saved account."""
     return InlineKeyboardMarkup(inline_keyboard=[
         [
-            InlineKeyboardButton(text="⚡ Fast (1.5s)", callback_data="vc_set_delay_1.5", style="primary"),
-            InlineKeyboardButton(text="🛡️ Safe (2.5s - Recommended)", callback_data="vc_set_delay_2.5", style="success")
+            InlineKeyboardButton(text="🔄 ᴛᴇsᴛ / ᴘɪɴɢ", callback_data=f"check_acc_status_{db_id}", style="primary"),
+            InlineKeyboardButton(text="📱 ᴠɪᴇᴡ ᴅᴇᴠɪᴄᴇs", callback_data=f"seldev_acc_{db_id}", style="primary")
         ],
         [
-            InlineKeyboardButton(text="🔒 Ultra-Safe (5.0s)", callback_data="vc_set_delay_5.0", style="primary"),
-            InlineKeyboardButton(text="🐢 Relaxed (8.0s)", callback_data="vc_set_delay_8.0", style="default")
+            InlineKeyboardButton(text="🛡️ sᴘᴀᴍʙᴏᴛ", callback_data=f"selspam_acc_{db_id}", style="success"),
+            InlineKeyboardButton(text="🔐 𝟸ғᴀ sᴛᴀᴛᴜs", callback_data=f"sel2fa_acc_{db_id}", style="primary")
         ],
         [
-            InlineKeyboardButton(text="🔙 Back to VC Menu", callback_data="menu_vc", style="default")
-        ]
-    ])
-
-def live_vc_blaster_keyboard() -> InlineKeyboardMarkup:
-    """Controls for active real-time continuous VC blaster."""
-    return InlineKeyboardMarkup(inline_keyboard=[
-        [
-            InlineKeyboardButton(text="⏹️ Stop VC Blast", callback_data="vc_stop_blast", style="danger")
+            InlineKeyboardButton(text="🚪 ʟᴇᴀᴠᴇ ᴄʜᴀᴛs", callback_data=f"selleave_acc_{db_id}", style="danger"),
+            InlineKeyboardButton(text="🗑️ ᴅᴇʟᴇᴛᴇ ᴅɪᴀʟᴏɢs", callback_data=f"seldeldia_acc_{db_id}", style="danger")
         ],
         [
-            InlineKeyboardButton(text="🎙️ VC Dashboard", callback_data="menu_vc", style="primary"),
-            InlineKeyboardButton(text="🏠 Main Menu", callback_data="back_main", style="default")
-        ]
-    ])
-
-def login_method_keyboard() -> InlineKeyboardMarkup:
-    """Keyboard for selecting login method with colorful styling."""
-    return InlineKeyboardMarkup(inline_keyboard=[
-        [
-            InlineKeyboardButton(text="📱 Phone + OTP (Interactive Login)", callback_data="btn_phone_login", style="success")
+            InlineKeyboardButton(text="🔑 ᴠɪᴇᴡ sᴛʀɪɴɢ", callback_data=f"acc_export_{db_id}", style="primary"),
+            InlineKeyboardButton(text="❌ ʀᴇᴍᴏᴠᴇ ғʀᴏᴍ ᴠᴀᴜʟᴛ", callback_data=f"del_acc_confirm_{db_id}", style="danger")
         ],
         [
-            InlineKeyboardButton(text="🔑 Direct Session String (Telethon/Pyrogram)", callback_data="btn_session_login", style="primary")
-        ],
-        [
-            InlineKeyboardButton(text="🔙 Back to Main Menu", callback_data="back_main", style="default")
-        ]
-    ])
-
-def account_detail_keyboard(db_id: int, is_active: int, status: str = "ACTIVE") -> InlineKeyboardMarkup:
-    """Keyboard for specific account view & actions."""
-    toggle_text = "⏸️ Pause Account" if is_active == 1 else "▶️ Activate Account"
-    toggle_style = "danger" if is_active == 1 else "success"
-
-    return InlineKeyboardMarkup(inline_keyboard=[
-        [
-            InlineKeyboardButton(text="🔄 Test / Ping Session", callback_data=f"acc_ping_{db_id}", style="primary"),
-            InlineKeyboardButton(text=toggle_text, callback_data=f"acc_toggle_{db_id}", style=toggle_style)
-        ],
-        [
-            InlineKeyboardButton(text="🔑 View Session String", callback_data=f"acc_export_{db_id}", style="primary"),
-            InlineKeyboardButton(text="🗑️ Logout & Remove", callback_data=f"acc_del_confirm_{db_id}", style="danger")
-        ],
-        [
-            InlineKeyboardButton(text="🔙 Back to Accounts List", callback_data="menu_vault", style="default"),
-            InlineKeyboardButton(text="🏠 Main Menu", callback_data="back_main", style="default")
+            InlineKeyboardButton(text="🔙 ʙᴀᴄᴋ ᴛᴏ ᴠᴀᴜʟᴛ", callback_data="menu_vault", style="default"),
+            InlineKeyboardButton(text="🏠 ᴍᴀɪɴ ᴍᴇɴᴜ", callback_data="back_main", style="default")
         ]
     ])
 
