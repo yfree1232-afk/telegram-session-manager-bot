@@ -1,3 +1,9 @@
+import asyncio
+try:
+    asyncio.get_event_loop()
+except RuntimeError:
+    asyncio.set_event_loop(asyncio.new_event_loop())
+
 from pyrogram import Client as PyroClient
 from telethon import TelegramClient
 
@@ -29,15 +35,11 @@ START_TEXT = """
 ✨ <b>WELCOME TO ICE BOT</b>
 ━━━━━━━━━━━━━━━━━━━━
 
-👋 <b>Welcome, {name}!</b>
-
-🛡️ <b>Trusted workspace • 100% safe handling</b>
-🟢 <b>Free mode active</b>
-📥 <i>Upload <code>.session</code>, <code>.json</code>, or paste string session to begin.</i>
-💠 <i>Choose any operation from the menu below:</i>
-━━━━━━━━━━━━━━━━━━━━
-🔐 <b>Database:</b> <i>MongoDB Atlas Cloud (AES-256 Encrypted)</i>
-"""
+🛡️ Trusted workspace • 100% safe handling
+🟢 Free mode active
+📥 Upload <code>.session</code>, <code>.zip</code>, or <code>.json</code> to begin.
+💠 Choose any operation from the menu below.
+""".strip()
 
 HELP_TEXT = """
 📖 <b>𝗜𝗖𝗘 𝗕𝗢𝗧 • 𝗨𝗦𝗘𝗥 𝗚𝗨𝗜𝗗𝗘</b>
