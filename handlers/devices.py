@@ -67,8 +67,8 @@ async def cb_src_vault_devices(query: CallbackQuery):
     buttons = []
     for acc in accounts:
         btn_text = f"👤 {acc['account_name']} ({acc['session_type'].capitalize()})"
-        buttons.append([InlineKeyboardButton(text=btn_text, callback_data=f"seldev_acc_{acc['id']}")])
-    buttons.append([InlineKeyboardButton(text="🔙 Back", callback_data="menu_devices")])
+        buttons.append([InlineKeyboardButton(text=btn_text, callback_data=f"seldev_acc_{acc['id']}", icon_custom_emoji_id="5409180749876174620")])
+    buttons.append([InlineKeyboardButton(text="🔙 Back", callback_data="menu_devices", icon_custom_emoji_id="5465665476988315663")])
 
     await query.message.edit_text(
         "💼 <b>Select an account from your Vault:</b>",
@@ -121,9 +121,9 @@ async def show_devices_view(user_id: int, message: Message, raw_session: str, se
     buttons = []
     for idx, auth in enumerate(authorizations, start=1):
         if not auth["current"]:
-            buttons.append([InlineKeyboardButton(text=f"❌ Kill {auth['device_model'][:18]}", callback_data=f"kill_single_{auth['hash']}")])
-    buttons.append([InlineKeyboardButton(text="🚨 Terminate All Other Sessions", callback_data="action_term_all")])
-    buttons.append([InlineKeyboardButton(text="✖️ Cancel", callback_data="cancel_pending_op")])
+            buttons.append([InlineKeyboardButton(text=f"❌ Kill {auth['device_model'][:18]}", callback_data=f"kill_single_{auth['hash']}", icon_custom_emoji_id="5465665476988315663")])
+    buttons.append([InlineKeyboardButton(text="🚨 Terminate All Other Sessions", callback_data="action_term_all", icon_custom_emoji_id="5465665476988315663")])
+    buttons.append([InlineKeyboardButton(text="✖️ Cancel", callback_data="cancel_pending_op", icon_custom_emoji_id="5465665476988315663")])
     await wait_msg.edit_text(text, reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons))
 
 @router.callback_query(F.data.startswith("kill_single_"))
