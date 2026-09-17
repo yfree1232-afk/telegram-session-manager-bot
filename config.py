@@ -48,7 +48,7 @@ if not ENCRYPTION_KEY:
         ENCRYPTION_KEY = Fernet.generate_key().decode()
 
 # UI Theme & Assets
-BOT_NAME = "Session Manager Voltx"
+BOT_NAME = "ICE Session Bot"
 SUPPORT_GROUP = os.getenv("SUPPORT_GROUP", "https://t.me/")
 CHANNEL = os.getenv("CHANNEL", "https://t.me/")
 START_IMG = os.getenv("START_IMG", "https://graph.org/file/e20f1883317dd4ff3cbfa.jpg")
