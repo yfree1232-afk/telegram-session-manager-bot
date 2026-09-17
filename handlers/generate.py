@@ -17,7 +17,8 @@ import config
 from database.db import db
 from helpers.keyboard import (
     session_type_keyboard, api_choice_keyboard, cancel_keyboard,
-    save_to_vault_keyboard, back_to_main_keyboard, fingerprints_selector_keyboard
+    save_to_vault_keyboard, back_to_main_keyboard, fingerprints_selector_keyboard,
+    session_phone_prompt_keyboard
 )
 from helpers.session_tools import DEVICE_FINGERPRINTS
 from helpers.states import GenerateStates
@@ -44,24 +45,31 @@ Kripya select karein aapko kis library ka String Session generate karna hai:
 @router.callback_query(F.data.in_(["gen_pyrogram", "gen_telethon"]))
 async def cb_choose_lib(query: CallbackQuery, state: FSMContext):
     session_type = "pyrogram" if query.data == "gen_pyrogram" else "telethon"
-    await state.update_data(session_type=session_type)
-    data = await state.get_data()
-    fp_key = data.get("fp_key")
+    await state.update_data(
+        session_type=session_type,
+        fp_key="default",
+        api_id=config.API_ID,
+        api_hash=config.API_HASH
+    )
+    await state.set_state(GenerateStates.waiting_phone)
+    text = f"""
+⚡ <b>{session_type.upper()} SESSION GENERATION</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📞 <b>Kripya apna Phone Number enter karein:</b>
 
-    if fp_key:
-        fp = DEVICE_FINGERPRINTS.get(fp_key, DEVICE_FINGERPRINTS["default"])
-        text = f"""
-╭━━━━━━━━━━━━━━━━━━━━╮
-│  ⚙️ <b>ᴄʜᴏᴏsᴇ ᴀᴘɪ ᴄʀᴇᴅᴇɴᴛɪᴀʟs</b>  │
-╰━━━━━━━━━━━━━━━━━━━━╯
-Target Library: <b>{session_type.upper()}</b>
-Hardware Profile: <b>{fp['icon']} {fp['name']}</b>
+💡 <i>Country code ke sath enter karein:</i>
+Example: <code>+919876543210</code>
 
-Aap Default Official API use karna chahte hain ya apna khud ka <code>API_ID</code> aur <code>API_HASH</code>?
+⚠️ <b>Notice:</b> Login OTP aapke <b>Telegram App (Chat ID 777000)</b> me aayega.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
-        await query.message.edit_text(text, reply_markup=api_choice_keyboard(session_type))
-    else:
-        text = f"""
+    await query.message.edit_text(text, reply_markup=session_phone_prompt_keyboard(session_type))
+
+@router.callback_query(F.data.startswith("gen_adv_"))
+async def cb_gen_adv(query: CallbackQuery, state: FSMContext):
+    session_type = query.data.split("_")[2]
+    await state.update_data(session_type=session_type)
+    text = f"""
 ╭━━━━━━━━━━━━━━━━━━━━╮
 │  📱 <b>ᴄʜᴏᴏsᴇ ᴅᴇᴠɪᴄᴇ ғɪɴɢᴇʀᴘʀɪɴᴛ</b>  │
 ╰━━━━━━━━━━━━━━━━━━━━╯
@@ -69,7 +77,7 @@ Target Library: <b>{session_type.upper()}</b>
 
 Session ko real physical device ke roop me disguise karne ke liye Hardware Profile select karein:
 """
-        await query.message.edit_text(text, reply_markup=fingerprints_selector_keyboard("gen"))
+    await query.message.edit_text(text, reply_markup=fingerprints_selector_keyboard("gen"))
 
 @router.callback_query(F.data.startswith("fpgen_"))
 async def cb_fpgen(query: CallbackQuery, state: FSMContext):
@@ -168,15 +176,38 @@ async def process_phone(message: Message, state: FSMContext):
         return
 
     phone = message.text.strip().replace(" ", "").replace("-", "")
+    if not phone.startswith("+"):
+        if len(phone) == 10 and phone.isdigit():
+            phone = "+91" + phone  # Default to India
+        elif phone.isdigit():
+            phone = "+" + phone
+        else:
+            await message.reply(
+                "❌ <b>Invalid Phone Number!</b>\n\n"
+                "Kripya sahi number country code ke sath enter karein.\n"
+                "Example: <code>+919876543210</code>",
+                reply_markup=cancel_keyboard()
+            )
+            return
+
+    if len(phone) < 8 or not phone[1:].isdigit():
+        await message.reply(
+            "❌ <b>Invalid Phone Number!</b>\n\n"
+            "Kripya sahi number country code ke sath enter karein.\n"
+            "Example: <code>+919876543210</code>",
+            reply_markup=cancel_keyboard()
+        )
+        return
+
     data = await state.get_data()
-    session_type = data["session_type"]
+    session_type = data.get("session_type", "pyrogram")
     fp_key = data.get("fp_key", "default")
     fp = DEVICE_FINGERPRINTS.get(fp_key, DEVICE_FINGERPRINTS["default"])
     api_id = data.get("api_id", config.API_ID)
     api_hash = data.get("api_hash", config.API_HASH)
     user_id = message.from_user.id
 
-    status_msg = await message.reply("🔄 <i>Sending login code to Telegram...</i>")
+    status_msg = await message.reply("🔄 <i>Connecting to Telegram & requesting login code...</i>")
 
     if session_type == "pyrogram":
         client = PyroClient(
@@ -197,10 +228,12 @@ async def process_phone(message: Message, state: FSMContext):
                 "phone": phone,
                 "phone_code_hash": sent_code.phone_code_hash,
                 "type": "pyrogram",
-                "fp": fp
+                "fp": fp,
+                "attempts": 0
             }
+            code_type_str = str(getattr(sent_code, "type", "")).lower()
         except PhoneNumberInvalid:
-            await status_msg.edit_text("❌ Invalid Phone Number! Please check and try again.", reply_markup=back_to_main_keyboard())
+            await status_msg.edit_text("❌ Invalid Phone Number! Please check your country code and try again.", reply_markup=back_to_main_keyboard())
             if client.is_connected:
                 await client.disconnect()
             await state.clear()
@@ -236,10 +269,12 @@ async def process_phone(message: Message, state: FSMContext):
                 "phone": phone,
                 "phone_code_hash": sent_code.phone_code_hash,
                 "type": "telethon",
-                "fp": fp
+                "fp": fp,
+                "attempts": 0
             }
+            code_type_str = type(sent_code.type).__name__.lower()
         except PhoneNumberInvalidError:
-            await status_msg.edit_text("❌ Invalid Phone Number! Please check and try again.", reply_markup=back_to_main_keyboard())
+            await status_msg.edit_text("❌ Invalid Phone Number! Please check your country code and try again.", reply_markup=back_to_main_keyboard())
             if client.is_connected():
                 await client.disconnect()
             await state.clear()
@@ -251,14 +286,77 @@ async def process_phone(message: Message, state: FSMContext):
             await state.clear()
             return
 
+    if "app" in code_type_str:
+        dest_title = "💬 Telegram App (Chat 777000)"
+        dest_desc = (
+            "⚠️ <b>Dhyan Dein:</b> OTP aapke SIM card par SMS me <b>NAHI</b> gaya hai!\n\n"
+            "👉 Ye 5-digit code aapke <b>Telegram App</b> ke andar <b>'Telegram'</b> ke official service notification chat (ID 777000) me aaya hai.\n\n"
+            "📱 <i>Kripya apna Telegram app open karein aur sabse upar 'Telegram' chat se 5-digit code dekhein.</i>\n"
+            "📲 <i>Agar SIM par SMS chahiye, to neeche 'Resend Code (SMS)' dabayein.</i>"
+        )
+    elif "sms" in code_type_str:
+        dest_title = "📱 Mobile SMS"
+        dest_desc = "👉 Code aapke mobile SIM ke SMS inbox me bhej diya gaya hai. SMS inbox check karein."
+    elif "call" in code_type_str:
+        dest_title = "📞 Automated Phone Call"
+        dest_desc = "👉 Telegram aapke number par automated call karke OTP bolega. Call receive karein."
+    else:
+        dest_title = "💬 Telegram App / SMS"
+        dest_desc = "👉 Code Telegram App (chat 777000) ya SMS par bhej diya gaya hai."
+
     await state.set_state(GenerateStates.waiting_otp)
-    await status_msg.edit_text(
-        "📩 <b>OTP sent to your Telegram Account!</b>\n\n"
-        "Kripya code enter karein.\n"
-        "💡 <b>Important:</b> Agar Telegram OTP accept na kare, to spaces ke sath bhejein (e.g. <code>1 2 3 4 5</code>).\n\n"
-        "<i>Send /cancel to abort.</i>",
-        reply_markup=cancel_keyboard()
-    )
+    otp_text = f"""
+📩 <b>LOGIN OTP SENT SUCCESSFULLY!</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📞 <b>Target Phone:</b> <code>{phone}</code>
+📍 <b>Destination:</b> <b>{dest_title}</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+{dest_desc}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✍️ <b>5-digit Code yahan enter karein:</b>
+💡 <i>Tip: Agar code accept na ho to spaces ke sath bhejein (e.g. <code>1 2 3 4 5</code>).</i>
+""".strip()
+
+    otp_kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="🔄 Resend Code (SMS)", callback_data="resend_otp_code")],
+        [InlineKeyboardButton(text="✖️ Cancel", callback_data="cancel_pending_op")]
+    ])
+    await status_msg.edit_text(otp_text, reply_markup=otp_kb)
+
+@router.callback_query(F.data == "resend_otp_code")
+async def cb_resend_otp_code(query: CallbackQuery, state: FSMContext):
+    user_id = query.from_user.id
+    if user_id not in ACTIVE_LOGINS:
+        await query.answer("Session expired. Pehle /start karein!", show_alert=True)
+        return
+
+    login = ACTIVE_LOGINS[user_id]
+    client = login["client"]
+    phone = login["phone"]
+    stype = login["type"]
+
+    await query.answer("Requesting SMS resend...", show_alert=False)
+    prog = await query.message.reply("🔄 <i>Telegram se SMS ke dwara code dubara mangwaya ja raha hai...</i>")
+
+    try:
+        if stype == "pyrogram":
+            sent_code = await client.resend_code(phone, login["phone_code_hash"])
+            login["phone_code_hash"] = sent_code.phone_code_hash
+        else:
+            sent_code = await client.send_code_request(phone, force_sms=True)
+            login["phone_code_hash"] = sent_code.phone_code_hash
+
+        await prog.delete()
+        await query.message.reply(
+            f"✅ <b>SMS Requested for {phone}!</b>\n\n"
+            f"Apne mobile ka SMS inbox check karein aur 5-digit code enter karein (e.g. <code>1 2 3 4 5</code>).",
+            reply_markup=cancel_keyboard()
+        )
+    except FloodWait as e:
+        await prog.edit_text(f"⏳ FloodWait: Please wait {e.value} seconds before resending.")
+    except Exception as e:
+        await prog.edit_text(f"⚠️ Telegram notice: <code>{e}</code>\n\nAgar SMS na aaye to Telegram app (chat 777000) check karein.")
 
 @router.message(GenerateStates.waiting_otp)
 async def process_otp(message: Message, state: FSMContext):
@@ -299,8 +397,22 @@ async def process_otp(message: Message, state: FSMContext):
                 reply_markup=cancel_keyboard()
             )
             return
-        except (PhoneCodeInvalid, PhoneCodeExpired):
-            await status_msg.edit_text("❌ Invalid or Expired OTP! Please try again.", reply_markup=back_to_main_keyboard())
+        except PhoneCodeInvalid:
+            login["attempts"] = login.get("attempts", 0) + 1
+            if login["attempts"] >= 3:
+                await status_msg.edit_text("❌ 3 Invalid attempts! Login cancelled.", reply_markup=back_to_main_keyboard())
+                await cleanup_user_login(user_id)
+                await state.clear()
+            else:
+                rem = 3 - login["attempts"]
+                await status_msg.edit_text(
+                    f"❌ <b>Invalid OTP!</b> ({rem} attempts remaining)\n\n"
+                    "Kripya sahi 5-digit code dubara enter karein (Spaces ke sath try karein, e.g. <code>1 2 3 4 5</code>):",
+                    reply_markup=cancel_keyboard()
+                )
+            return
+        except PhoneCodeExpired:
+            await status_msg.edit_text("⏳ OTP Expired! Please click /start to generate a new session.", reply_markup=back_to_main_keyboard())
             await cleanup_user_login(user_id)
             await state.clear()
             return
@@ -330,8 +442,22 @@ async def process_otp(message: Message, state: FSMContext):
                 reply_markup=cancel_keyboard()
             )
             return
-        except (PhoneCodeInvalidError, PhoneCodeExpiredError):
-            await status_msg.edit_text("❌ Invalid or Expired OTP! Please try again.", reply_markup=back_to_main_keyboard())
+        except PhoneCodeInvalidError:
+            login["attempts"] = login.get("attempts", 0) + 1
+            if login["attempts"] >= 3:
+                await status_msg.edit_text("❌ 3 Invalid attempts! Login cancelled.", reply_markup=back_to_main_keyboard())
+                await cleanup_user_login(user_id)
+                await state.clear()
+            else:
+                rem = 3 - login["attempts"]
+                await status_msg.edit_text(
+                    f"❌ <b>Invalid OTP!</b> ({rem} attempts remaining)\n\n"
+                    "Kripya sahi 5-digit code dubara enter karein (Spaces ke sath try karein, e.g. <code>1 2 3 4 5</code>):",
+                    reply_markup=cancel_keyboard()
+                )
+            return
+        except PhoneCodeExpiredError:
+            await status_msg.edit_text("⏳ OTP Expired! Please click /start to generate a new session.", reply_markup=back_to_main_keyboard())
             await cleanup_user_login(user_id)
             await state.clear()
             return
