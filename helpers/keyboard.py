@@ -1,26 +1,34 @@
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 def main_menu_keyboard(owner_id: int = 0, user_id: int = 0, accounts_count: int = 0) -> InlineKeyboardMarkup:
-    """Aesthetic ICE BOT Main Menu with Bot API 9.4 colorful button styles."""
+    """Full ICE BOT (@Oversout_bot) Main Menu with Bot API 9.4 colorful button styles."""
     buttons = [
         [
             InlineKeyboardButton(text="⚡ ɢᴇɴᴇʀᴀᴛᴇ sᴇssɪᴏɴ (ᴘʏʀᴏɢʀᴀᴍ & ᴛᴇʟᴇᴛʜᴏɴ) ⚡", callback_data="menu_generate", style="primary")
         ],
         [
-            InlineKeyboardButton(text="📱 ᴀᴄᴛɪᴠᴇ ᴅᴇᴠɪᴄᴇs", callback_data="menu_devices", style="primary"),
-            InlineKeyboardButton(text=f"💼 sᴀᴠᴇᴅ ᴀᴄᴄᴏᴜɴᴛs ({accounts_count})", callback_data="menu_vault", style="primary")
+            InlineKeyboardButton(text="📱 ᴅᴇᴠɪᴄᴇ ғɪɴɢᴇʀᴘʀɪɴᴛs", callback_data="tool_fingerprints", style="primary"),
+            InlineKeyboardButton(text="🔍 ᴄʜᴇᴄᴋ sᴇssɪᴏɴs", callback_data="tool_check_health", style="primary")
         ],
         [
-            InlineKeyboardButton(text="🛡️ sᴘᴀᴍʙᴏᴛ sᴛᴀᴛᴜs", callback_data="tool_check_spambot", style="success"),
-            InlineKeyboardButton(text="🔐 𝟸ғᴀ sᴇᴄᴜʀɪᴛʏ ᴄʜᴇᴄᴋ", callback_data="tool_check_2fa", style="primary")
+            InlineKeyboardButton(text="🛡️ sᴘᴀᴍ ᴄʜᴇᴄᴋ", callback_data="tool_check_spambot", style="success"),
+            InlineKeyboardButton(text="🔐 𝟸ғᴀ ᴍᴀɴᴀɢᴇʀ", callback_data="tool_check_2fa", style="primary")
         ],
         [
-            InlineKeyboardButton(text="🚪 ʟᴇᴀᴠᴇ ᴀʟʟ ᴄʜᴀᴛs", callback_data="tool_leave_chats", style="danger"),
-            InlineKeyboardButton(text="🗑️ ᴅᴇʟᴇᴛᴇ ᴀʟʟ ᴅɪᴀʟᴏɢs", callback_data="tool_delete_dialogs", style="danger")
+            InlineKeyboardButton(text="📅 ᴄʜᴇᴄᴋ ᴀᴄᴄᴏᴜɴᴛ ᴀɢᴇ", callback_data="tool_check_age", style="primary"),
+            InlineKeyboardButton(text="🔀 sᴇssɪᴏɴ ᴄᴏɴᴠᴇʀᴛᴇʀ", callback_data="tool_converter", style="primary")
         ],
         [
-            InlineKeyboardButton(text="👤 ᴀᴄᴄᴏᴜɴᴛ ɪɴғᴏ", callback_data="tool_acc_info", style="primary"),
-            InlineKeyboardButton(text="🔄 ᴄʜᴇᴄᴋ ᴀʟʟ ʜᴇᴀʟᴛʜ", callback_data="vault_check_all", style="success")
+            InlineKeyboardButton(text="👁️ ᴘʀɪᴠᴀᴄʏ sᴇᴛᴛɪɴɢs", callback_data="tool_privacy", style="primary"),
+            InlineKeyboardButton(text="🚪 ʟᴇᴀᴠᴇ ᴀʟʟ ᴄʜᴀᴛs", callback_data="tool_leave_chats", style="danger")
+        ],
+        [
+            InlineKeyboardButton(text="🗑️ ᴅᴇʟᴇᴛᴇ ᴀʟʟ ᴅɪᴀʟᴏɢs", callback_data="tool_delete_dialogs", style="danger"),
+            InlineKeyboardButton(text="🚨 ᴛᴇʀᴍɪɴᴀᴛᴇ ᴀʟʟ", callback_data="menu_devices", style="danger")
+        ],
+        [
+            InlineKeyboardButton(text=f"💼 sᴀᴠᴇᴅ ᴠᴀᴜʟᴛ ({accounts_count})", callback_data="menu_vault", style="primary"),
+            InlineKeyboardButton(text="👤 ᴜsᴇʀ ᴄᴇɴᴛᴇʀ", callback_data="tool_user_center", style="default")
         ],
         [
             InlineKeyboardButton(text="ℹ️ ʜᴇʟᴘ & ɢᴜɪᴅᴇ", callback_data="menu_help", style="default")
@@ -138,4 +146,39 @@ def account_detail_keyboard(db_id: int) -> InlineKeyboardMarkup:
             InlineKeyboardButton(text="🏠 ᴍᴀɪɴ ᴍᴇɴᴜ", callback_data="back_main", style="default")
         ]
     ])
+
+def fingerprints_selector_keyboard(mode: str = "view") -> InlineKeyboardMarkup:
+    """Select device fingerprint profile."""
+    prefix = "fpgen_" if mode == "gen" else "fpview_"
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(text="📱 Samsung Galaxy S24 Ultra", callback_data=f"{prefix}samsung", style="primary"),
+            InlineKeyboardButton(text="🍏 iPhone 15 Pro Max", callback_data=f"{prefix}iphone", style="primary")
+        ],
+        [
+            InlineKeyboardButton(text="📱 Xiaomi 14 Pro", callback_data=f"{prefix}xiaomi", style="primary"),
+            InlineKeyboardButton(text="💻 Windows 11 PC", callback_data=f"{prefix}desktop", style="primary")
+        ],
+        [
+            InlineKeyboardButton(text="🍎 MacBook Pro M3", callback_data=f"{prefix}macos", style="primary"),
+            InlineKeyboardButton(text="⚡ Official Telegram App", callback_data=f"{prefix}default", style="success")
+        ],
+        [
+            InlineKeyboardButton(text="🔙 ʙᴀᴄᴋ ᴛᴏ ᴍᴇɴᴜ", callback_data="back_main", style="default")
+        ]
+    ])
+
+def user_center_keyboard() -> InlineKeyboardMarkup:
+    """User center overview keyboard."""
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(text="💼 Open Encrypted Vault", callback_data="menu_vault", style="primary"),
+            InlineKeyboardButton(text="🔄 Check All Health", callback_data="vault_check_all", style="success")
+        ],
+        [
+            InlineKeyboardButton(text="📤 Export Backup File", callback_data="vault_export", style="primary"),
+            InlineKeyboardButton(text="🏠 Main Menu", callback_data="back_main", style="default")
+        ]
+    ])
+
 
