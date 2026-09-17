@@ -38,15 +38,15 @@ async def cb_menu_vault(query: CallbackQuery, state: FSMContext = None):
     if accounts:
         for acc in accounts:
             btn_text = f"👤 {acc['account_name']} ({acc['session_type'].capitalize()})"
-            buttons.append([InlineKeyboardButton(text=btn_text, callback_data=f"manage_acc_{acc['id']}")])
+            buttons.append([InlineKeyboardButton(text=btn_text, callback_data=f"manage_acc_{acc['id']}", icon_custom_emoji_id="5409180749876174620")])
 
     buttons.append([
-        InlineKeyboardButton(text="➕ ᴀᴅᴅ ᴀᴄᴄᴏᴜɴᴛ", callback_data="vault_add_acc"),
-        InlineKeyboardButton(text="🔍 ᴄʜᴇᴄᴋ ᴀʟʟ ʜᴇᴀʟᴛʜ", callback_data="vault_check_all")
+        InlineKeyboardButton(text="➕ ᴀᴅᴅ ᴀᴄᴄᴏᴜɴᴛ", callback_data="vault_add_acc", icon_custom_emoji_id="5445284980978621387"),
+        InlineKeyboardButton(text="🔍 ᴄʜᴇᴄᴋ ᴀʟʟ ʜᴇᴀʟᴛʜ", callback_data="vault_check_all", icon_custom_emoji_id="5427009714745511175")
     ])
     if accounts:
-        buttons.append([InlineKeyboardButton(text="📤 ᴇxᴘᴏʀᴛ ᴠᴀᴜʟᴛ (ʙᴀᴄᴋᴜᴘ)", callback_data="vault_export")])
-    buttons.append([InlineKeyboardButton(text="🔙 ʙᴀᴄᴋ ᴛᴏ ᴍᴇɴᴜ", callback_data="back_main")])
+        buttons.append([InlineKeyboardButton(text="📤 ᴇxᴘᴏʀᴛ ᴠᴀᴜʟᴛ (ʙᴀᴄᴋᴜᴘ)", callback_data="vault_export", icon_custom_emoji_id="5465451996544837861")])
+    buttons.append([InlineKeyboardButton(text="🔙 ʙᴀᴄᴋ ᴛᴏ ᴍᴇɴᴜ", callback_data="back_main", icon_custom_emoji_id="5465665476988315663")])
 
     await query.message.edit_text(text, reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons))
 
@@ -102,15 +102,15 @@ async def cb_check_status(query: CallbackQuery):
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 <i>Tip: Ye session Telegram server se revoke ya delete ho chuka hai.</i>
 """
-    await status_msg.edit_text(res_text, reply_markup=InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="🔙 Back to Account", callback_data=f"manage_acc_{acc_id}")]]))
+    await status_msg.edit_text(res_text, reply_markup=InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="🔙 Back to Account", callback_data=f"manage_acc_{acc_id}", icon_custom_emoji_id="5409180749876174620")]]))
 
 @router.callback_query(F.data.startswith("del_acc_confirm_"))
 async def cb_del_confirm(query: CallbackQuery):
     acc_id = int(query.data.split("_")[3])
     buttons = [
         [
-            InlineKeyboardButton(text="🗑️ ʏᴇs, ᴅᴇʟᴇᴛᴇ", callback_data=f"del_acc_exec_{acc_id}"),
-            InlineKeyboardButton(text="❌ ᴄᴀɴᴄᴇʟ", callback_data=f"manage_acc_{acc_id}")
+            InlineKeyboardButton(text="🗑️ ʏᴇs, ᴅᴇʟᴇᴛᴇ", callback_data=f"del_acc_exec_{acc_id}", icon_custom_emoji_id="5465665476988315663"),
+            InlineKeyboardButton(text="❌ ᴄᴀɴᴄᴇʟ", callback_data=f"manage_acc_{acc_id}", icon_custom_emoji_id="5465665476988315663")
         ]
     ]
     await query.message.edit_text("⚠️ <b>Are you sure you want to remove this account from your Vault?</b>", reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons))
@@ -172,7 +172,7 @@ async def process_vault_add(message: Message, state: FSMContext):
         f"👤 <b>Name:</b> {acc_name}\n"
         f"📞 <b>Phone:</b> <code>{health['phone']}</code>\n"
         f"⚡ <b>Engine:</b> <code>{stype.upper()}</code>",
-        reply_markup=InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="💼 Open Vault", callback_data="menu_vault")]])
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="💼 Open Vault", callback_data="menu_vault", icon_custom_emoji_id="5409180749876174620")]])
     )
 
 @router.callback_query(F.data == "vault_check_all")
@@ -205,7 +205,7 @@ async def cb_vault_check_all(query: CallbackQuery):
 
     await progress_msg.edit_text(
         report,
-        reply_markup=InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="🔙 Back to Vault", callback_data="menu_vault")]])
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="🔙 Back to Vault", callback_data="menu_vault", icon_custom_emoji_id="5409180749876174620")]])
     )
 
 @router.callback_query(F.data == "vault_export")
@@ -234,4 +234,4 @@ async def cb_vault_export(query: CallbackQuery):
         document=doc,
         caption="🔐 <b>Here is your Vault Backup file!</b>\n\n<i>Keep this file completely confidential.</i>"
     )
-    await query.message.reply("✅ Backup file sent above!", reply_markup=InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="🔙 Back to Vault", callback_data="menu_vault")]]))
+    await query.message.reply("✅ Backup file sent above!", reply_markup=InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="🔙 Back to Vault", callback_data="menu_vault", icon_custom_emoji_id="5409180749876174620")]]))
