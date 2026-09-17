@@ -1,52 +1,66 @@
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 def main_menu_keyboard(owner_id: int = 0, user_id: int = 0, accounts_count: int = 0) -> InlineKeyboardMarkup:
-    """Full ICE BOT (@Oversout_bot) Main Menu with Bot API 9.4 colorful button styles."""
+    """1:1 Exact ICE BOT (@Oversout_bot) Main Menu Grid."""
     buttons = [
         [
-            InlineKeyboardButton(text="⚡ ɢᴇɴᴇʀᴀᴛᴇ sᴇssɪᴏɴ (ᴘʏʀᴏɢʀᴀᴍ & ᴛᴇʟᴇᴛʜᴏɴ) ⚡", callback_data="menu_generate", style="primary")
+            InlineKeyboardButton(text="📩 Read OTP", callback_data="a_read_otp")
         ],
         [
-            InlineKeyboardButton(text="📱 ᴅᴇᴠɪᴄᴇ ғɪɴɢᴇʀᴘʀɪɴᴛs", callback_data="tool_fingerprints", style="primary"),
-            InlineKeyboardButton(text="🔍 ᴄʜᴇᴄᴋ sᴇssɪᴏɴs", callback_data="tool_check_health", style="primary")
+            InlineKeyboardButton(text="Check Sessions", callback_data="a_check"),
+            InlineKeyboardButton(text="Spam Check", callback_data="a_spam")
         ],
         [
-            InlineKeyboardButton(text="🛡️ sᴘᴀᴍ ᴄʜᴇᴄᴋ", callback_data="tool_check_spambot", style="success"),
-            InlineKeyboardButton(text="🔐 𝟸ғᴀ ᴍᴀɴᴀɢᴇʀ", callback_data="tool_check_2fa", style="primary")
+            InlineKeyboardButton(text="Contact Tool", callback_data="a_contact"),
+            InlineKeyboardButton(text="2FA Manager", callback_data="a_2fa")
         ],
         [
-            InlineKeyboardButton(text="📅 ᴄʜᴇᴄᴋ ᴀᴄᴄᴏᴜɴᴛ ᴀɢᴇ", callback_data="tool_check_age", style="primary"),
-            InlineKeyboardButton(text="🔀 sᴇssɪᴏɴ ᴄᴏɴᴠᴇʀᴛᴇʀ", callback_data="tool_converter", style="primary")
+            InlineKeyboardButton(text="Split File", callback_data="a_split"),
+            InlineKeyboardButton(text="Session API Link", callback_data="cv_s2api")
         ],
         [
-            InlineKeyboardButton(text="👁️ ᴘʀɪᴠᴀᴄʏ sᴇᴛᴛɪɴɢs", callback_data="tool_privacy", style="primary"),
-            InlineKeyboardButton(text="🚪 ʟᴇᴀᴠᴇ ᴀʟʟ ᴄʜᴀᴛs", callback_data="tool_leave_chats", style="danger")
+            InlineKeyboardButton(text="Merge Files", callback_data="merge_start")
         ],
         [
-            InlineKeyboardButton(text="🗑️ ᴅᴇʟᴇᴛᴇ ᴀʟʟ ᴅɪᴀʟᴏɢs", callback_data="tool_delete_dialogs", style="danger"),
-            InlineKeyboardButton(text="🚨 ᴛᴇʀᴍɪɴᴀᴛᴇ ᴀʟʟ", callback_data="menu_devices", style="danger")
+            InlineKeyboardButton(text="Create Session", callback_data="menu_generate"),
+            InlineKeyboardButton(text="Device Cloner", callback_data="tool_fingerprints")
         ],
         [
-            InlineKeyboardButton(text=f"💼 sᴀᴠᴇᴅ ᴠᴀᴜʟᴛ ({accounts_count})", callback_data="menu_vault", style="primary"),
-            InlineKeyboardButton(text="👤 ᴜsᴇʀ ᴄᴇɴᴛᴇʀ", callback_data="tool_user_center", style="default")
+            InlineKeyboardButton(text="Privacy Settings", callback_data="a_privacy"),
+            InlineKeyboardButton(text="Check Age", callback_data="a_age")
         ],
         [
-            InlineKeyboardButton(text="ℹ️ ʜᴇʟᴘ & ɢᴜɪᴅᴇ", callback_data="menu_help", style="default")
+            InlineKeyboardButton(text="Converter", callback_data="a_convert"),
+            InlineKeyboardButton(text="Leave Groups & Channels", callback_data="c_leavegc")
+        ],
+        [
+            InlineKeyboardButton(text="Kill Sessions", callback_data="a_kill"),
+            InlineKeyboardButton(text="Terminate All", callback_data="a_term")
+        ],
+        [
+            InlineKeyboardButton(text="Clear Data", callback_data="a_clear")
+        ],
+        [
+            InlineKeyboardButton(text="👤 UserCenter", callback_data="user_center"),
+            InlineKeyboardButton(text="🆘 Customer Support", callback_data="support_contact")
+        ],
+        [
+            InlineKeyboardButton(text="🌐 Language", callback_data="lang_menu")
         ]
     ]
     if owner_id and user_id == owner_id:
-        buttons.append([InlineKeyboardButton(text="👑 ᴀᴅᴍɪɴ ᴄᴏɴᴛʀᴏʟ ᴘᴀɴᴇʟ", callback_data="admin_panel", style="danger")])
+        buttons.append([InlineKeyboardButton(text="👑 Admin Control Panel", callback_data="admin_panel")])
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 def session_type_keyboard() -> InlineKeyboardMarkup:
     """Select Pyrogram or Telethon session."""
     return InlineKeyboardMarkup(inline_keyboard=[
         [
-            InlineKeyboardButton(text="🐍 ᴘʏʀᴏɢʀᴀᴍ (ᴠ2)", callback_data="gen_pyrogram", style="primary"),
-            InlineKeyboardButton(text="⚡ ᴛᴇʟᴇᴛʜᴏɴ", callback_data="gen_telethon", style="primary")
+            InlineKeyboardButton(text="🐍 Pyrogram (v2)", callback_data="gen_pyrogram"),
+            InlineKeyboardButton(text="⚡ Telethon", callback_data="gen_telethon")
         ],
         [
-            InlineKeyboardButton(text="🔙 ʙᴀᴄᴋ ᴛᴏ ᴍᴇɴᴜ", callback_data="back_main", style="default")
+            InlineKeyboardButton(text="✖️ Cancel", callback_data="cancel_pending_op")
         ]
     ])
 
@@ -54,13 +68,13 @@ def api_choice_keyboard(session_type: str) -> InlineKeyboardMarkup:
     """Choose between Default API or Custom API credentials."""
     return InlineKeyboardMarkup(inline_keyboard=[
         [
-            InlineKeyboardButton(text="✨ ᴜsᴇ ᴅᴇғᴀᴜʟᴛ ᴏғғɪᴄɪᴀʟ ᴀᴘɪ (ғᴀsᴛ)", callback_data=f"apichoice_default_{session_type}", style="success"),
+            InlineKeyboardButton(text="✨ Use Default Official API", callback_data=f"apichoice_default_{session_type}"),
         ],
         [
-            InlineKeyboardButton(text="⚙️ ᴇɴᴛᴇʀ ᴍʏ ᴏᴡɴ ᴀᴘɪ_ɪᴅ / ʜᴀsʜ", callback_data=f"apichoice_custom_{session_type}", style="primary")
+            InlineKeyboardButton(text="⚙️ Custom API_ID / Hash", callback_data=f"apichoice_custom_{session_type}")
         ],
         [
-            InlineKeyboardButton(text="🔙 ᴄᴀɴᴄᴇʟ", callback_data="back_main", style="danger")
+            InlineKeyboardButton(text="✖️ Cancel", callback_data="cancel_pending_op")
         ]
     ])
 
@@ -68,24 +82,35 @@ def session_source_keyboard(action_type: str) -> InlineKeyboardMarkup:
     """Ask user whether to paste session string or choose from vault."""
     return InlineKeyboardMarkup(inline_keyboard=[
         [
-            InlineKeyboardButton(text="📝 ᴘᴀsᴛᴇ sᴇssɪᴏɴ sᴛʀɪɴɢ", callback_data=f"src_paste_{action_type}", style="primary"),
-            InlineKeyboardButton(text="💼 ғʀᴏᴍ ᴍʏ ᴠᴀᴜʟᴛ", callback_data=f"src_vault_{action_type}", style="success")
+            InlineKeyboardButton(text="📝 Paste Session String", callback_data=f"src_paste_{action_type}"),
+            InlineKeyboardButton(text="💼 Select From Vault", callback_data=f"src_vault_{action_type}")
         ],
         [
-            InlineKeyboardButton(text="🔙 ʙᴀᴄᴋ ᴛᴏ ᴍᴇɴᴜ", callback_data="back_main", style="default")
+            InlineKeyboardButton(text="✖️ Cancel", callback_data="cancel_pending_op")
         ]
     ])
 
 def cancel_keyboard() -> InlineKeyboardMarkup:
-    """Cancel operation button."""
+    """Exact ICE BOT cancel button."""
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="❌ ᴄᴀɴᴄᴇʟ", callback_data="cancel_action", style="danger")]
+        [InlineKeyboardButton(text="✖️ Cancel", callback_data="cancel_pending_op")]
     ])
 
 def back_to_main_keyboard() -> InlineKeyboardMarkup:
-    """Simple back button to main menu."""
+    """Exact ICE BOT back / cancel button."""
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="🔙 ʙᴀᴄᴋ ᴛᴏ ᴍᴀɪɴ ᴍᴇɴᴜ", callback_data="back_main", style="default")]
+        [InlineKeyboardButton(text="✖️ Cancel", callback_data="cancel_pending_op")]
+    ])
+
+def language_keyboard() -> InlineKeyboardMarkup:
+    """Exact ICE BOT language menu."""
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="English", callback_data="lang_set:en")],
+        [InlineKeyboardButton(text="中文", callback_data="lang_set:zh")],
+        [InlineKeyboardButton(text="Русский", callback_data="lang_set:ru")],
+        [InlineKeyboardButton(text="বাংলা", callback_data="lang_set:bn")],
+        [InlineKeyboardButton(text="Tiếng Việt", callback_data="lang_set:vi")],
+        [InlineKeyboardButton(text="✖️ Cancel", callback_data="cancel_pending_op")]
     ])
 
 def save_to_vault_keyboard(session_type: str) -> InlineKeyboardMarkup:
@@ -164,7 +189,7 @@ def fingerprints_selector_keyboard(mode: str = "view") -> InlineKeyboardMarkup:
             InlineKeyboardButton(text="⚡ Official Telegram App", callback_data=f"{prefix}default", style="success")
         ],
         [
-            InlineKeyboardButton(text="🔙 ʙᴀᴄᴋ ᴛᴏ ᴍᴇɴᴜ", callback_data="back_main", style="default")
+            InlineKeyboardButton(text="✖️ Cancel", callback_data="cancel_pending_op")
         ]
     ])
 
@@ -172,12 +197,12 @@ def user_center_keyboard() -> InlineKeyboardMarkup:
     """User center overview keyboard."""
     return InlineKeyboardMarkup(inline_keyboard=[
         [
-            InlineKeyboardButton(text="💼 Open Encrypted Vault", callback_data="menu_vault", style="primary"),
-            InlineKeyboardButton(text="🔄 Check All Health", callback_data="vault_check_all", style="success")
+            InlineKeyboardButton(text="💼 Open Encrypted Vault", callback_data="menu_vault"),
+            InlineKeyboardButton(text="🔄 Check All Health", callback_data="vault_check_all")
         ],
         [
-            InlineKeyboardButton(text="📤 Export Backup File", callback_data="vault_export", style="primary"),
-            InlineKeyboardButton(text="🏠 Main Menu", callback_data="back_main", style="default")
+            InlineKeyboardButton(text="📤 Export Backup File", callback_data="vault_export"),
+            InlineKeyboardButton(text="✖️ Cancel", callback_data="cancel_pending_op")
         ]
     ])
 
