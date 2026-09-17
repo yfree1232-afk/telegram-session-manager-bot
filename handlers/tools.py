@@ -3,13 +3,16 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
 from database.db import db
 from helpers.keyboard import (
-    tools_menu_keyboard, session_source_keyboard, cancel_keyboard, back_to_main_keyboard
+    tools_menu_keyboard, session_source_keyboard, cancel_keyboard,
+    back_to_main_keyboard, fingerprints_selector_keyboard, user_center_keyboard
 )
 from helpers.states import ToolStates
 from helpers.session_tools import (
     leave_all_dialogs, check_session_health,
     check_2fa_status, get_account_full_info,
-    check_spambot_status, delete_all_dialogs
+    check_spambot_status, delete_all_dialogs,
+    DEVICE_FINGERPRINTS, estimate_account_age,
+    check_account_privacy, convert_session
 )
 from handlers.common import detect_session_type
 
@@ -578,5 +581,312 @@ async def cb_acc_export(query: CallbackQuery):
         [InlineKeyboardButton(text="🏠 Main Menu", callback_data="back_main")]
     ]
     await query.message.edit_text(text, reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons))
+
+# =========================================================================
+# 📱 DEVICE FINGERPRINTS & CLONER
+# =========================================================================
+
+@router.callback_query(F.data == "tool_fingerprints")
+async def cb_tool_fingerprints(query: CallbackQuery):
+    text = """
+📱 <b>DEVICE FINGERPRINTS & CLONER SUITE</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Telegram server security se safe rehne ke liye aap custom device fingerprint use kar sakte hain. 
+
+Har session in authentic hardware signatures ke sath connect hota hai:
+
+Select any hardware profile to inspect or generate:
+"""
+    await query.message.edit_text(text, reply_markup=fingerprints_selector_keyboard("view"))
+
+@router.callback_query(F.data.startswith("fpview_"))
+async def cb_fpview(query: CallbackQuery):
+    dev_key = query.data.split("_")[1]
+    fp = DEVICE_FINGERPRINTS.get(dev_key, DEVICE_FINGERPRINTS["default"])
+    text = f"""
+{fp['icon']} <b>HARDWARE PROFILE: {fp['name']}</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📱 <b>Device Model:</b> <code>{fp['device_model']}</code>
+💻 <b>System Version:</b> <code>{fp['system_version']}</code>
+📦 <b>App Version:</b> <code>{fp['app_version']}</code>
+🌐 <b>Language Code:</b> <code>{fp['lang_code']} ({fp['system_lang_code']})</code>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+💡 <i>Is fingerprint se generate kiya hua session Telegram settings me issi real device ke roop me appear hoga.</i>
+"""
+    buttons = [
+        [InlineKeyboardButton(text=f"⚡ Generate Session with {fp['name'][:18]}", callback_data=f"fpgen_{dev_key}", style="primary")],
+        [InlineKeyboardButton(text="🔙 Back to Devices", callback_data="tool_fingerprints", style="default")],
+        [InlineKeyboardButton(text="🏠 Main Menu", callback_data="back_main", style="default")]
+    ]
+    await query.message.edit_text(text, reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons))
+
+# =========================================================================
+# 📅 CHECK ACCOUNT REGISTRATION AGE
+# =========================================================================
+
+@router.callback_query(F.data == "tool_check_age")
+async def cb_tool_check_age(query: CallbackQuery, state: FSMContext):
+    await state.set_state(ToolStates.waiting_age_session)
+    text = """
+📅 <b>CHECK TELEGRAM ACCOUNT AGE</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Apne Telegram account ka creation period aur account tier pata karein.
+
+Send any of the following:
+1️⃣ <b>Telegram User ID</b> (e.g. <code>8721437284</code>)
+2️⃣ <b>Pyrogram or Telethon Session String</b>
+
+Send /cancel to abort.
+"""
+    await query.message.edit_text(text, reply_markup=cancel_keyboard())
+
+@router.message(ToolStates.waiting_age_session)
+async def process_age_session(message: Message, state: FSMContext):
+    if message.text and message.text.strip().lower() == "/cancel":
+        await state.clear()
+        await message.reply("Cancelled.", reply_markup=back_to_main_keyboard())
+        return
+
+    val = message.text.strip()
+    try:
+        await message.delete()
+    except Exception:
+        pass
+    await state.clear()
+
+    user_id = None
+    if val.isdigit():
+        user_id = int(val)
+    else:
+        stype = detect_session_type(val)
+        health = await check_session_health(val, stype)
+        if health.get("status") == "alive" and health.get("user_id"):
+            user_id = health["user_id"]
+        else:
+            await message.reply("❌ Invalid Session or User ID! Please check and try again.", reply_markup=back_to_main_keyboard())
+            return
+
+    res = estimate_account_age(user_id)
+    text = f"""
+📅 <b>ACCOUNT AGE ESTIMATE</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🆔 <b>User ID:</b> <code>{res['user_id']}</code>
+🗓️ <b>Created Around:</b> <b>{res['period']}</b>
+🏆 <b>Account Tier:</b> {res['description']}
+💎 <b>Collector Status:</b> {res['rarity']}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+"""
+    await message.answer(text, reply_markup=back_to_main_keyboard())
+
+# =========================================================================
+# 🔀 SESSION FORMAT CONVERTER
+# =========================================================================
+
+@router.callback_query(F.data == "tool_converter")
+async def cb_tool_converter(query: CallbackQuery, state: FSMContext):
+    await state.set_state(ToolStates.waiting_convert_session)
+    text = """
+🔀 <b>SESSION FORMAT CONVERTER</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Convert between <b>Pyrogram (v2)</b> and <b>Telethon</b> strings instantly without invalidating your login!
+
+Send your string session to convert:
+<i>(Send /cancel to abort)</i>
+"""
+    await query.message.edit_text(text, reply_markup=cancel_keyboard())
+
+@router.message(ToolStates.waiting_convert_session)
+async def process_convert_session(message: Message, state: FSMContext):
+    if message.text and message.text.strip().lower() == "/cancel":
+        await state.clear()
+        await message.reply("Cancelled.", reply_markup=back_to_main_keyboard())
+        return
+
+    raw_session = message.text.strip()
+    try:
+        await message.delete()
+    except Exception:
+        pass
+    await state.clear()
+
+    prog_msg = await message.answer("🔄 <i>Converting session format...</i>")
+    success, res = await convert_session(raw_session)
+
+    if success:
+        text = f"""
+🎉 <b>SESSION CONVERTED SUCCESSFULLY!</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🔄 <b>From:</b> <code>{res['from_type']}</code>
+➡️ <b>To:</b> <code>{res['to_type']}</code>
+👤 <b>Account:</b> {res.get('user', 'Telegram User')}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+<code>{res['result']}</code>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+⚠️ <i>Click above to copy. Keep this confidential!</i>
+"""
+        await prog_msg.edit_text(text, reply_markup=back_to_main_keyboard())
+    else:
+        await prog_msg.edit_text(f"❌ <b>Conversion failed:</b> <code>{res}</code>", reply_markup=back_to_main_keyboard())
+
+# =========================================================================
+# 👁️ PRIVACY SETTINGS AUDIT
+# =========================================================================
+
+@router.callback_query(F.data == "tool_privacy")
+async def cb_tool_privacy(query: CallbackQuery):
+    text = """
+👁️ <b>ACCOUNT PRIVACY AUDIT</b>
+
+Aap session string paste karna chahte hain ya apne saved vault se select karna chahte hain?
+"""
+    await query.message.edit_text(text, reply_markup=session_source_keyboard("privacy"))
+
+@router.callback_query(F.data == "src_paste_privacy")
+async def cb_paste_privacy(query: CallbackQuery, state: FSMContext):
+    await state.set_state(ToolStates.waiting_privacy_session)
+    await query.message.edit_text(
+        "📝 <b>Send String Session to inspect privacy settings:</b>\n\n"
+        "<i>(Your session string will be deleted immediately from chat)</i>\n\n"
+        "Send /cancel to abort.",
+        reply_markup=cancel_keyboard()
+    )
+
+@router.message(ToolStates.waiting_privacy_session)
+async def process_privacy_session(message: Message, state: FSMContext):
+    if message.text and message.text.strip().lower() == "/cancel":
+        await state.clear()
+        await message.reply("Cancelled.", reply_markup=back_to_main_keyboard())
+        return
+
+    raw_session = message.text.strip()
+    try:
+        await message.delete()
+    except Exception:
+        pass
+    await state.clear()
+
+    prog_msg = await message.answer("🔍 <i>Fetching Privacy Settings...</i>")
+    success, res = await check_account_privacy(raw_session)
+
+    if success:
+        text = f"""
+👁️ <b>ACCOUNT PRIVACY REPORT</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📞 <b>Phone Number:</b> {res['phone_privacy']}
+🕒 <b>Last Seen & Online:</b> {res['last_seen_privacy']}
+🖼️ <b>Profile Photo:</b> {res['photo_privacy']}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+"""
+        await prog_msg.edit_text(text, reply_markup=back_to_main_keyboard())
+    else:
+        await prog_msg.edit_text(f"❌ <b>Failed to fetch privacy:</b> <code>{res}</code>", reply_markup=back_to_main_keyboard())
+
+@router.callback_query(F.data == "src_vault_privacy")
+async def cb_vault_privacy(query: CallbackQuery):
+    user_id = query.from_user.id
+    accounts = await db.get_user_accounts(user_id)
+    if not accounts:
+        await query.answer("Aapke vault me koi account nahi hai!", show_alert=True)
+        return
+
+    buttons = []
+    for acc in accounts:
+        btn_text = f"👤 {acc['account_name']} ({acc['session_type'].capitalize()})"
+        buttons.append([InlineKeyboardButton(text=btn_text, callback_data=f"selpriv_acc_{acc['id']}")])
+    buttons.append([InlineKeyboardButton(text="🔙 Back", callback_data="back_main")])
+
+    await query.message.edit_text("💼 <b>Select an account from your Vault:</b>", reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons))
+
+@router.callback_query(F.data.startswith("selpriv_acc_"))
+async def cb_selpriv_exec(query: CallbackQuery):
+    acc_id = int(query.data.split("_")[2])
+    user_id = query.from_user.id
+    account = await db.get_account(acc_id, user_id)
+    if not account:
+        await query.answer("Account not found!", show_alert=True)
+        return
+
+    prog_msg = await query.message.edit_text("🔍 <i>Fetching Privacy Settings...</i>")
+    success, res = await check_account_privacy(account["raw_session"])
+
+    if success:
+        text = f"""
+👁️ <b>PRIVACY REPORT: {account['account_name']}</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📞 <b>Phone Number:</b> {res['phone_privacy']}
+🕒 <b>Last Seen & Online:</b> {res['last_seen_privacy']}
+🖼️ <b>Profile Photo:</b> {res['photo_privacy']}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+"""
+        await prog_msg.edit_text(text, reply_markup=back_to_main_keyboard())
+    else:
+        await prog_msg.edit_text(f"❌ <b>Failed:</b> <code>{res}</code>", reply_markup=back_to_main_keyboard())
+
+# =========================================================================
+# 👤 USER CENTER
+# =========================================================================
+
+@router.callback_query(F.data == "tool_user_center")
+async def cb_user_center(query: CallbackQuery):
+    user = query.from_user
+    acc_count = await db.count_user_accounts(user.id)
+    text = f"""
+✨ <b>ICE BOT • USER CENTER</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+👤 <b>Name:</b> {user.first_name}
+🆔 <b>Telegram ID:</b> <code>{user.id}</code>
+🔗 <b>Username:</b> @{user.username or 'None'}
+💼 <b>Accounts in Vault:</b> <code>{acc_count}</code>
+🛡️ <b>Security Status:</b> AES-256 Cloud Encrypted
+⚡ <b>Tier:</b> Free Unlimited Mode
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+"""
+    await query.message.edit_text(text, reply_markup=user_center_keyboard())
+
+# =========================================================================
+# 📥 DOCUMENT / FILE UPLOAD HANDLER (.session / .json / .txt)
+# =========================================================================
+
+@router.message(F.document)
+async def handle_document_upload(message: Message):
+    doc = message.document
+    fn = doc.file_name or "file"
+    if not (fn.endswith(".session") or fn.endswith(".json") or fn.endswith(".txt")):
+        await message.reply("⚠️ Please send a <code>.session</code>, <code>.json</code>, or <code>.txt</code> file.", reply_markup=back_to_main_keyboard())
+        return
+
+    status_msg = await message.reply("📥 <i>Downloading and parsing file...</i>")
+    try:
+        file_obj = await message.bot.get_file(doc.file_id)
+        stream = await message.bot.download_file(file_obj.file_path)
+        content = stream.read().decode("utf-8", errors="ignore").strip()
+
+        if len(content) > 100:
+            stype = detect_session_type(content)
+            health = await check_session_health(content, stype)
+            if health.get("status") == "alive":
+                await db.save_account(
+                    user_id=message.from_user.id,
+                    session_type=stype,
+                    account_name=health.get("name") or fn,
+                    phone=health.get("phone") or "File Account",
+                    tg_user_id=health.get("user_id") or 0,
+                    raw_session=content
+                )
+                await status_msg.edit_text(
+                    f"🎉 <b>FILE PARSED & SAVED TO VAULT!</b>\n\n"
+                    f"📁 <b>Filename:</b> <code>{fn}</code>\n"
+                    f"👤 <b>Name:</b> {health['name']}\n"
+                    f"📞 <b>Phone:</b> <code>{health['phone']}</code>\n"
+                    f"⚡ <b>Engine:</b> <code>{stype.upper()}</code>",
+                    reply_markup=InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="💼 Open Vault", callback_data="menu_vault")]])
+                )
+            else:
+                await status_msg.edit_text(f"❌ <b>Session in file is dead/invalid:</b> <code>{health.get('error')}</code>", reply_markup=back_to_main_keyboard())
+        else:
+            await status_msg.edit_text("❌ File does not contain a valid session string.", reply_markup=back_to_main_keyboard())
+    except Exception as e:
+        await status_msg.edit_text(f"❌ Error processing file: <code>{e}</code>", reply_markup=back_to_main_keyboard())
+
 
 
