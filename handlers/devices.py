@@ -20,34 +20,17 @@ router = Router()
 async def cb_menu_devices(query: CallbackQuery, state: FSMContext):
     await state.clear()
     is_term = query.data == "a_term"
-    title = "🚨 <b>Terminate All</b>" if is_term else "📱 <b>Kill Sessions</b>"
-    user_id = query.from_user.id
-    accounts = await db.get_user_accounts(user_id)
-
-    if accounts:
-        buttons = []
-        for acc in accounts:
-            btn_text = f"👤 {acc['account_name']} ({acc['phone']})"
-            buttons.append([InlineKeyboardButton(text=btn_text, callback_data=f"seldev_acc_{acc['id']}", icon_custom_emoji_id="5409180749876174620")])
-        buttons.append([InlineKeyboardButton(text="📥 ᴜᴘʟᴏᴀᴅ ғɪʟᴇ / ᴘᴀsᴛᴇ sᴛʀɪɴɢ", callback_data="src_paste_devices", icon_custom_emoji_id="5465451996544837861")])
-        buttons.append([InlineKeyboardButton(text="🔙 ʙᴀᴄᴋ ᴛᴏ ᴍᴇɴᴜ", callback_data="back_main", icon_custom_emoji_id="5465665476988315663")])
-        await state.update_data(auto_term=is_term)
-        await query.message.edit_text(
-            f"{title}\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nSelect a saved account or send files/string:\n",
-            reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons)
-        )
-        return
-
+    title = "🚨 Terminate All" if is_term else ("🔥 Kill Sessions" if query.data == "a_kill" else "📱 Active Devices & Terminate")
     text = f"""
-{title}
+<tg-emoji emoji-id="5341492148468465410">📂</tg-emoji> <b>{title}</b>
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-⏳ <b>Waiting for files...</b>
+<tg-emoji emoji-id="5258113901106580375">⏳</tg-emoji> <b>Waiting for files...</b>
 
 Please send files (<code>.session</code>, <code>.json</code>) or session string to inspect and terminate active logins.
-"""
+""".strip()
     await state.set_state(DeviceStates.waiting_session)
-    await state.update_data(auto_term=is_term)
+    await state.update_data(auto_term=is_term or query.data == "a_kill")
     await query.message.edit_text(text, reply_markup=cancel_keyboard())
 
 @router.callback_query(F.data == "src_paste_devices")
