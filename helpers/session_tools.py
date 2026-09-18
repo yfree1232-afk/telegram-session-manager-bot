@@ -22,6 +22,14 @@ from telethon.sessions.string import StringSession, CURRENT_VERSION, _STRUCT_PRE
 import ipaddress
 import base64
 import struct
+import os
+import io
+import json
+import tempfile
+import sqlite3
+import zipfile
+import re
+import config
 
 def to_telethon_session(session_str: str) -> str:
     """Converts Pyrogram (v2) string or raw session to valid Telethon StringSession."""
