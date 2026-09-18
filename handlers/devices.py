@@ -1,3 +1,4 @@
+import io
 from aiogram import Router, F
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
@@ -7,7 +8,10 @@ from helpers.keyboard import (
     terminate_confirm_keyboard
 )
 from helpers.states import DeviceStates
-from helpers.session_tools import get_active_sessions, terminate_all_sessions, terminate_single_session
+from helpers.session_tools import (
+    get_active_sessions, terminate_all_sessions, terminate_single_session,
+    extract_all_sessions_from_bytes
+)
 from handlers.common import INSPECT_CACHE, detect_session_type
 
 router = Router()
@@ -56,14 +60,32 @@ async def cb_src_paste_devices(query: CallbackQuery, state: FSMContext):
         reply_markup=cancel_keyboard()
     )
 
-@router.message(DeviceStates.waiting_session)
+@router.message(DeviceStates.waiting_session, F.text | F.document)
 async def process_devices_session(message: Message, state: FSMContext):
     if message.text and message.text.strip().lower() == "/cancel":
         await state.clear()
         await message.reply("Cancelled.", reply_markup=back_to_main_keyboard())
         return
 
-    raw_session = message.text.strip()
+    raw_session = None
+    if message.text:
+        raw_session = message.text.strip()
+    elif message.document:
+        try:
+            file_io = io.BytesIO()
+            await message.bot.download(message.document, destination=file_io)
+            raw_bytes = file_io.getvalue()
+            fname = message.document.file_name or "account.session"
+            extracted = extract_all_sessions_from_bytes(fname, raw_bytes)
+            if extracted:
+                raw_session = extracted[0]["session"]
+        except Exception:
+            pass
+
+    if not raw_session:
+        await message.reply("❌ <b>Could not extract session!</b>\nPlease send a valid <code>.session</code> file or session string.", reply_markup=cancel_keyboard())
+        return
+
     try:
         await message.delete()
     except Exception:
