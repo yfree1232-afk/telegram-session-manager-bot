@@ -380,14 +380,27 @@ async def get_account_full_info(session_str: str, session_type: str = "telethon"
 # =========================================================================
 
 DEVICE_FINGERPRINTS = {
+    "default": {
+        "name": "Official Telegram Desktop (Fast)",
+        "icon": "⚡",
+        "device_model": "PC 64bit",
+        "system_version": "Windows 11",
+        "app_version": "5.2.2 x64",
+        "lang_code": "en",
+        "system_lang_code": "en-US",
+        "api_id": 2040,
+        "api_hash": "b1844dd132448e97666d48830424ac4d"
+    },
     "samsung": {
         "name": "Samsung Galaxy S24 Ultra",
         "icon": "📱",
         "device_model": "Samsung Galaxy S24 Ultra",
-        "system_version": "Android 14 (One UI 6.1)",
-        "app_version": "10.14.0",
+        "system_version": "SDK 34",
+        "app_version": "10.14.0 (4822)",
         "lang_code": "en",
-        "system_lang_code": "en-US"
+        "system_lang_code": "en-US",
+        "api_id": 6,
+        "api_hash": "eb06d4abfb49dc3eeb1aeb98da0f582e"
     },
     "iphone": {
         "name": "Apple iPhone 15 Pro Max",
@@ -396,43 +409,42 @@ DEVICE_FINGERPRINTS = {
         "system_version": "iOS 17.5.1",
         "app_version": "10.14.1",
         "lang_code": "en",
-        "system_lang_code": "en-US"
-    },
-    "xiaomi": {
-        "name": "Xiaomi 14 Pro",
-        "icon": "📱",
-        "device_model": "Xiaomi 14 Pro",
-        "system_version": "Android 14 (HyperOS)",
-        "app_version": "10.14.0",
-        "lang_code": "en",
-        "system_lang_code": "en-US"
+        "system_lang_code": "en-US",
+        "api_id": 10840,
+        "api_hash": "f343c80b769eddec7351d82f53409ee8"
     },
     "desktop": {
         "name": "Windows 11 PC (64-bit)",
         "icon": "💻",
-        "device_model": "Desktop PC x64",
-        "system_version": "Windows 11 Pro 23H2",
-        "app_version": "5.1.5 x64",
+        "device_model": "PC 64bit",
+        "system_version": "Windows 11 Pro",
+        "app_version": "5.2.2 x64",
         "lang_code": "en",
-        "system_lang_code": "en-US"
+        "system_lang_code": "en-US",
+        "api_id": 2040,
+        "api_hash": "b1844dd132448e97666d48830424ac4d"
     },
     "macos": {
         "name": "Apple MacBook Pro M3",
         "icon": "🍎",
         "device_model": "MacBook Pro M3",
-        "system_version": "macOS Sonoma 14.5",
+        "system_version": "macOS 14.5",
         "app_version": "10.14.2",
         "lang_code": "en",
-        "system_lang_code": "en-US"
+        "system_lang_code": "en-US",
+        "api_id": 2834,
+        "api_hash": "68875f756c9b437a8b916ca3de215815"
     },
-    "default": {
-        "name": "Official Telegram App",
-        "icon": "⚡",
-        "device_model": "Official Telegram App",
-        "system_version": "14.0",
-        "app_version": "10.14.0",
+    "xiaomi": {
+        "name": "Xiaomi 14 Pro",
+        "icon": "📱",
+        "device_model": "Xiaomi 14 Pro",
+        "system_version": "SDK 34",
+        "app_version": "10.14.0 (4822)",
         "lang_code": "en",
-        "system_lang_code": "en-US"
+        "system_lang_code": "en-US",
+        "api_id": 6,
+        "api_hash": "eb06d4abfb49dc3eeb1aeb98da0f582e"
     }
 }
 
