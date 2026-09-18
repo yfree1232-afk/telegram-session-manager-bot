@@ -8,9 +8,9 @@ load_dotenv()
 
 # Telegram Bot Credentials
 BOT_TOKEN = os.getenv("BOT_TOKEN", "8973572372:AAFD7hLJ2cPdlOCmcta08m4WkSsISOac-sc")
-# Default Official Telegram Desktop Credentials (Guarantees 100% OTP delivery to chat 777000)
-API_ID = int(os.getenv("API_ID", "2040"))
-API_HASH = os.getenv("API_HASH", "b1844dd132448e97666d48830424ac4d")
+# Telegram App Credentials (my.telegram.org verified developer API)
+API_ID = int(os.getenv("API_ID", "30929822"))
+API_HASH = os.getenv("API_HASH", "8586e9580c6480b65d23150cec959506")
 
 # Owner / Admin ID
 _owner = os.getenv("OWNER_ID", "8828864427")
