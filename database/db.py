@@ -255,13 +255,11 @@ class MongoDatabase:
         return accs
 
     async def get_account(self, account_id: int, user_id: int) -> dict | None:
-        if user_id in config.ADMIN_IDS:
-            doc = await self.accounts.find_one({"$or": [{"id": account_id}, {"account_id": account_id}]})
-        else:
-            doc = await self.accounts.find_one({
-                "$or": [{"id": account_id}, {"account_id": account_id}],
-                "$or": [{"user_id": user_id}, {"owner_id": user_id}]
-            })
+        query = {"$or": [{"id": account_id}, {"account_id": account_id}]}
+        if user_id not in config.ADMIN_IDS:
+            user_clause = {"$or": [{"user_id": user_id}, {"owner_id": user_id}]}
+            query = {"$and": [query, user_clause]}
+        doc = await self.accounts.find_one(query)
         if not doc:
             return None
 
