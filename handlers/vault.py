@@ -8,7 +8,7 @@ from aiogram.types import (
 from database.db import db
 from helpers.keyboard import cancel_keyboard, back_to_main_keyboard, account_detail_keyboard
 from helpers.states import VaultStates
-from helpers.session_tools import check_session_health
+from helpers.session_tools import check_session_health, extract_all_sessions_from_bytes
 from handlers.common import detect_session_type
 
 router = Router()
@@ -133,14 +133,32 @@ async def cb_vault_add_acc(query: CallbackQuery, state: FSMContext):
         reply_markup=cancel_keyboard()
     )
 
-@router.message(VaultStates.waiting_session)
+@router.message(VaultStates.waiting_session, F.text | F.document)
 async def process_vault_add(message: Message, state: FSMContext):
     if message.text and message.text.strip().lower() == "/cancel":
         await state.clear()
         await message.reply("Cancelled.", reply_markup=back_to_main_keyboard())
         return
 
-    raw_session = message.text.strip()
+    raw_session = None
+    if message.text:
+        raw_session = message.text.strip()
+    elif message.document:
+        try:
+            file_io = io.BytesIO()
+            await message.bot.download(message.document, destination=file_io)
+            raw_bytes = file_io.getvalue()
+            fname = message.document.file_name or "account.session"
+            extracted = extract_all_sessions_from_bytes(fname, raw_bytes)
+            if extracted:
+                raw_session = extracted[0]["session"]
+        except Exception:
+            pass
+
+    if not raw_session:
+        await message.reply("❌ <b>Could not extract session!</b>\nPlease send a valid <code>.session</code> file or session string.", reply_markup=cancel_keyboard())
+        return
+
     try:
         await message.delete()
     except Exception:
