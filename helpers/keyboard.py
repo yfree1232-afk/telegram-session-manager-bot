@@ -65,8 +65,11 @@ def main_menu_keyboard(owner_id: int = 0, user_id: int = 0, accounts_count: int 
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 def session_type_keyboard() -> InlineKeyboardMarkup:
-    """Select Pyrogram or Telethon session."""
+    """Select QR Code, Pyrogram, or Telethon session."""
     return InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(text="📷 ǫʀ ᴄᴏᴅᴇ ʟᴏɢɪɴ (ɴᴏ ᴏᴛᴘ ɴᴇᴇᴅᴇᴅ!)", callback_data="gen_qr", icon_custom_emoji_id=EMOJI_BOLT)
+        ],
         [
             InlineKeyboardButton(text="⚡ ᴘʏʀᴏɢʀᴀᴍ (ᴠ𝟸)", callback_data="gen_pyrogram", icon_custom_emoji_id=EMOJI_BOLT),
             InlineKeyboardButton(text="⚡ ᴛᴇʟᴇᴛʜᴏɴ", callback_data="gen_telethon", icon_custom_emoji_id=EMOJI_BOLT)
