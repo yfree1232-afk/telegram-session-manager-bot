@@ -48,12 +48,65 @@ Select an operation below or choose from the main dashboard:
         pass
     await query.message.edit_text(text, reply_markup=tools_menu_keyboard())
 
+def make_tool_selection_keyboard(accounts: list, tool_code: str) -> InlineKeyboardMarkup:
+    buttons = []
+    for acc in accounts:
+        btn_text = f"👤 {acc['account_name']} ({acc['phone']})"
+        buttons.append([InlineKeyboardButton(text=btn_text, callback_data=f"sel_{tool_code}_{acc['id']}", icon_custom_emoji_id="5409180749876174620")])
+    buttons.append([InlineKeyboardButton(text="📥 ᴜᴘʟᴏᴀᴅ ғɪʟᴇ / ᴘᴀsᴛᴇ sᴛʀɪɴɢ", callback_data=f"input_{tool_code}", icon_custom_emoji_id="5465451996544837861")])
+    buttons.append([InlineKeyboardButton(text="🔙 ʙᴀᴄᴋ ᴛᴏ ᴍᴇɴᴜ", callback_data="back_main", icon_custom_emoji_id="5465665476988315663")])
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
+
+@router.callback_query(F.data.startswith("sel_"))
+async def cb_tool_select_account(query: CallbackQuery, state: FSMContext):
+    parts = query.data.split("_")
+    tool = parts[1]
+    acc_id = int(parts[2])
+    user_id = query.from_user.id
+    acc = await db.get_account(acc_id, user_id)
+    if not acc or not acc.get("raw_session"):
+        await query.answer("Account session not found!", show_alert=True)
+        return
+
+    await state.clear()
+    raw_s = acc["raw_session"]
+    if tool == "readotp":
+        await execute_read_otp(query.message, raw_s)
+    elif tool == "health":
+        await execute_health_check(query.message, raw_s)
+    elif tool == "spam":
+        await execute_spambot_check(query.message, raw_s)
+    elif tool == "2fa":
+        await execute_2fa_check(query.message, raw_s)
+    elif tool == "contact":
+        await execute_contact_tool(query.message, raw_s)
+    elif tool == "leavegc":
+        await execute_leave_chats(query.message, raw_s)
+    elif tool == "clear":
+        await execute_delete_dialogs(query.message, raw_s)
+    elif tool == "privacy":
+        await execute_privacy_check(query.message, raw_s)
+    elif tool == "age":
+        await execute_age_check(query.message, raw_s)
+    elif tool == "convert":
+        await execute_converter(query.message, raw_s)
+
 # =========================================================================
 # 📩 READ OTP (1:1 ICE BOT)
 # =========================================================================
 
-@router.callback_query(F.data == "a_read_otp")
+@router.callback_query(F.data.in_(["a_read_otp", "input_readotp"]))
 async def cb_a_read_otp(query: CallbackQuery, state: FSMContext):
+    user_id = query.from_user.id
+    if query.data == "a_read_otp":
+        accounts = await db.get_user_accounts(user_id)
+        if accounts:
+            await query.message.edit_text(
+                "📂 <b>📩 Read OTP</b>\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nSelect a saved account from your vault or upload a file:",
+                reply_markup=make_tool_selection_keyboard(accounts, "readotp")
+            )
+            return
+
     await state.set_state(ToolStates.waiting_read_otp)
     text = """
 📂 <b>📩 Read OTP</b>
@@ -106,8 +159,18 @@ async def execute_read_otp(message: Message, raw_session: str):
 # 🔍 CHECK SESSIONS (HEALTH)
 # =========================================================================
 
-@router.callback_query(F.data.in_(["a_check", "tool_check_health"]))
+@router.callback_query(F.data.in_(["a_check", "tool_check_health", "input_health"]))
 async def cb_quick_health(query: CallbackQuery, state: FSMContext):
+    user_id = query.from_user.id
+    if query.data in ["a_check", "tool_check_health"]:
+        accounts = await db.get_user_accounts(user_id)
+        if accounts:
+            await query.message.edit_text(
+                "📂 <b>🔍 Check Sessions</b>\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nSelect a saved account from your vault or upload a file:",
+                reply_markup=make_tool_selection_keyboard(accounts, "health")
+            )
+            return
+
     await state.set_state(ToolStates.waiting_health_session)
     text = """
 📂 <b>🔍 Check Sessions</b>
@@ -165,8 +228,18 @@ async def execute_health_check(message: Message, raw_session: str):
 # 🛡️ SPAM CHECK
 # =========================================================================
 
-@router.callback_query(F.data.in_(["a_spam", "tool_check_spambot"]))
+@router.callback_query(F.data.in_(["a_spam", "tool_check_spambot", "input_spam"]))
 async def cb_tool_spambot(query: CallbackQuery, state: FSMContext):
+    user_id = query.from_user.id
+    if query.data in ["a_spam", "tool_check_spambot"]:
+        accounts = await db.get_user_accounts(user_id)
+        if accounts:
+            await query.message.edit_text(
+                "📂 <b>🛡️ Spam Check</b>\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nSelect a saved account from your vault or upload a file:",
+                reply_markup=make_tool_selection_keyboard(accounts, "spam")
+            )
+            return
+
     await state.set_state(ToolStates.waiting_spambot_session)
     text = """
 📂 <b>🛡️ Spam Check</b>
@@ -214,8 +287,18 @@ async def execute_spambot_check(message: Message, raw_session: str):
 # 📇 CONTACT TOOL
 # =========================================================================
 
-@router.callback_query(F.data == "a_contact")
+@router.callback_query(F.data.in_(["a_contact", "input_contact"]))
 async def cb_a_contact(query: CallbackQuery, state: FSMContext):
+    user_id = query.from_user.id
+    if query.data == "a_contact":
+        accounts = await db.get_user_accounts(user_id)
+        if accounts:
+            await query.message.edit_text(
+                "📂 <b>📇 Contact Tool</b>\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nSelect a saved account from your vault or upload a file:",
+                reply_markup=make_tool_selection_keyboard(accounts, "contact")
+            )
+            return
+
     await state.set_state(ToolStates.waiting_contact)
     text = """
 📂 <b>📇 Contact Tool</b>
@@ -283,8 +366,18 @@ async def cb_action_del_contacts(query: CallbackQuery):
 # 🔐 2FA MANAGER
 # =========================================================================
 
-@router.callback_query(F.data.in_(["a_2fa", "tool_check_2fa"]))
+@router.callback_query(F.data.in_(["a_2fa", "tool_check_2fa", "input_2fa"]))
 async def cb_a_2fa(query: CallbackQuery, state: FSMContext):
+    user_id = query.from_user.id
+    if query.data in ["a_2fa", "tool_check_2fa"]:
+        accounts = await db.get_user_accounts(user_id)
+        if accounts:
+            await query.message.edit_text(
+                "📂 <b>🔐 2FA Manager</b>\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nSelect a saved account from your vault or upload a file:",
+                reply_markup=make_tool_selection_keyboard(accounts, "2fa")
+            )
+            return
+
     await state.set_state(ToolStates.waiting_2fa_session)
     text = """
 📂 <b>🔐 2FA Manager</b>
@@ -485,8 +578,18 @@ async def process_merge_text(message: Message, state: FSMContext):
 # 👁️ PRIVACY SETTINGS AUDIT
 # =========================================================================
 
-@router.callback_query(F.data.in_(["a_privacy", "tool_privacy"]))
+@router.callback_query(F.data.in_(["a_privacy", "tool_privacy", "input_privacy"]))
 async def cb_tool_privacy(query: CallbackQuery, state: FSMContext):
+    user_id = query.from_user.id
+    if query.data in ["a_privacy", "tool_privacy"]:
+        accounts = await db.get_user_accounts(user_id)
+        if accounts:
+            await query.message.edit_text(
+                "📂 <b>👁️ Privacy Settings</b>\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nSelect a saved account from your vault or upload a file:",
+                reply_markup=make_tool_selection_keyboard(accounts, "privacy")
+            )
+            return
+
     await state.set_state(ToolStates.waiting_privacy_session)
     text = """
 📂 <b>👁️ Privacy Settings</b>
@@ -591,8 +694,18 @@ async def execute_age_check(message: Message, val: str):
 # 🔀 CONVERTER
 # =========================================================================
 
-@router.callback_query(F.data.in_(["a_convert", "tool_converter"]))
+@router.callback_query(F.data.in_(["a_convert", "tool_converter", "input_convert"]))
 async def cb_tool_converter(query: CallbackQuery, state: FSMContext):
+    user_id = query.from_user.id
+    if query.data in ["a_convert", "tool_converter"]:
+        accounts = await db.get_user_accounts(user_id)
+        if accounts:
+            await query.message.edit_text(
+                "📂 <b>🔀 Session Converter</b>\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nSelect a saved account from your vault or upload a file:",
+                reply_markup=make_tool_selection_keyboard(accounts, "convert")
+            )
+            return
+
     await state.set_state(ToolStates.waiting_convert_session)
     text = """
 📂 <b>🔀 Session Converter</b>
@@ -643,8 +756,18 @@ async def execute_converter(message: Message, raw_session: str):
 # 🚪 LEAVE GROUPS & CHANNELS
 # =========================================================================
 
-@router.callback_query(F.data.in_(["c_leavegc", "tool_leave_chats"]))
+@router.callback_query(F.data.in_(["c_leavegc", "tool_leave_chats", "input_leavegc"]))
 async def cb_tool_leave(query: CallbackQuery, state: FSMContext):
+    user_id = query.from_user.id
+    if query.data in ["c_leavegc", "tool_leave_chats"]:
+        accounts = await db.get_user_accounts(user_id)
+        if accounts:
+            await query.message.edit_text(
+                "📂 <b>🚪 Leave Groups & Channels</b>\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nSelect a saved account from your vault or upload a file:",
+                reply_markup=make_tool_selection_keyboard(accounts, "leavegc")
+            )
+            return
+
     await state.set_state(ToolStates.waiting_leave_session)
     text = """
 📂 <b>🚪 Leave Groups & Channels</b>
@@ -684,8 +807,18 @@ async def execute_leave_chats(message: Message, raw_session: str):
 # 🗑️ CLEAR DATA (DELETE ALL DIALOGS)
 # =========================================================================
 
-@router.callback_query(F.data.in_(["a_clear", "tool_delete_dialogs"]))
+@router.callback_query(F.data.in_(["a_clear", "tool_delete_dialogs", "input_clear"]))
 async def cb_tool_delete_dialogs(query: CallbackQuery, state: FSMContext):
+    user_id = query.from_user.id
+    if query.data in ["a_clear", "tool_delete_dialogs"]:
+        accounts = await db.get_user_accounts(user_id)
+        if accounts:
+            await query.message.edit_text(
+                "📂 <b>🗑️ Clear Data</b>\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nSelect a saved account from your vault or upload a file:",
+                reply_markup=make_tool_selection_keyboard(accounts, "clear")
+            )
+            return
+
     await state.set_state(ToolStates.waiting_delete_dialogs_session)
     text = """
 📂 <b>🗑️ Clear Data</b>
