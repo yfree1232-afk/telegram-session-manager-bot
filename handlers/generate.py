@@ -4,9 +4,11 @@ try:
 except RuntimeError:
     asyncio.set_event_loop(asyncio.new_event_loop())
 
+import io
+import qrcode
 from aiogram import Router, F
 from aiogram.fsm.context import FSMContext
-from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton, BufferedInputFile
 from pyrogram import Client as PyroClient
 from pyrogram.errors import (
     SessionPasswordNeeded, FloodWait, PhoneNumberInvalid,
@@ -26,7 +28,7 @@ from helpers.keyboard import (
     save_to_vault_keyboard, back_to_main_keyboard, fingerprints_selector_keyboard,
     session_phone_prompt_keyboard
 )
-from helpers.session_tools import DEVICE_FINGERPRINTS
+from helpers.session_tools import DEVICE_FINGERPRINTS, to_pyrogram_session, to_telethon_session
 from helpers.states import GenerateStates
 from handlers.common import (
     ACTIVE_LOGINS, RECENT_SESSIONS, cleanup_user_login
@@ -47,6 +49,104 @@ Kripya select karein aapko kis library ka String Session generate karna hai:
 🔹 <b>Telethon:</b> Official MTProto features and stable tools ke liye.
 """
     await query.message.edit_text(text, reply_markup=session_type_keyboard())
+
+@router.callback_query(F.data == "gen_qr")
+async def cb_gen_qr(query: CallbackQuery, state: FSMContext):
+    await state.clear()
+    status = await query.message.edit_text("🔄 <i>Generating official Telegram QR Code... Please wait.</i>")
+    client = TelegramClient(StringSession(), config.API_ID, config.API_HASH)
+    try:
+        await client.connect()
+        qr_login = await client.qr_login()
+
+        qr_img = qrcode.make(qr_login.url)
+        buf = io.BytesIO()
+        qr_img.save(buf, format="PNG")
+        buf.seek(0)
+
+        photo = BufferedInputFile(buf.getvalue(), filename="telegram_qr_login.png")
+        try:
+            await status.delete()
+        except Exception:
+            pass
+
+        qr_msg = await query.message.answer_photo(
+            photo,
+            caption=(
+                "📷 <b>SCAN QR CODE TO LOGIN (INSTANT)</b>\n"
+                "━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                "1️⃣ Apne mobile me official <b>Telegram App</b> open karein.\n"
+                "2️⃣ <b>Settings > Devices > Link Desktop Device</b> par click karein.\n"
+                "3️⃣ Apna camera is QR Code par point karke scan karein!\n\n"
+                "⚡ <b>Koi OTP / SMS nahi lagega! Session turant generate ho jayega.</b>\n"
+                "⏳ <i>Valid for 60 seconds... Waiting for scan.</i>"
+            ),
+            reply_markup=cancel_keyboard()
+        )
+
+        try:
+            user = await qr_login.wait(timeout=60)
+            session_str = client.session.save()
+            pyro_str = to_pyrogram_session(session_str)
+
+            user_id = query.from_user.id
+            account_name = f"{user.first_name or ''} {user.last_name or ''}".strip() or "Telegram User"
+            await db.save_account(
+                user_id=user_id,
+                session_type="telethon",
+                account_name=account_name,
+                phone=user.phone or "QR_Linked",
+                tg_user_id=user.id,
+                raw_session=session_str
+            )
+
+            success_text = f"""
+🎉 <b>TELEGRAM SESSION GENERATED SUCCESSFULLY!</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+👤 <b>User:</b> {account_name}
+🆔 <b>User ID:</b> <code>{user.id}</code>
+📞 <b>Phone:</b> <code>{user.phone or 'N/A'}</code>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🔹 <b>Telethon Session:</b>
+<code>{session_str}</code>
+
+🔹 <b>Pyrogram (v2) Session:</b>
+<code>{pyro_str}</code>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+💾 <i>Session aapke Vault me save ho gaya hai aur Saved Messages me bhi bhej diya gaya hai!</i>
+""".strip()
+            await qr_msg.reply(success_text, reply_markup=back_to_main_keyboard())
+            try:
+                await client.send_message("me", f"⚡ <b>New Session Generated via ICE Bot:</b>\n\nTelethon:\n<code>{session_str}</code>\n\nPyrogram:\n<code>{pyro_str}</code>")
+            except Exception:
+                pass
+        except asyncio.TimeoutError:
+            await qr_msg.reply("⏳ <i>QR Code expired. Dubara try karne ke liye /generate dabayein.</i>", reply_markup=back_to_main_keyboard())
+        except SessionPasswordNeededError:
+            ACTIVE_LOGINS[query.from_user.id] = {
+                "client": client,
+                "phone": "QR_User",
+                "phone_code_hash": "",
+                "type": "telethon",
+                "fp": DEVICE_FINGERPRINTS["default"],
+                "attempts": 0
+            }
+            await state.set_state(GenerateStates.waiting_password)
+            await qr_msg.reply(
+                "🔐 <b>2FA Password Required!</b>\n\n"
+                "Aapke account par Two-Step Verification enabled hai.\n"
+                "Kripya apna 2FA password yahan message me bhejein:",
+                reply_markup=cancel_keyboard()
+            )
+            return
+        except Exception as e:
+            await qr_msg.reply(f"❌ Error during QR login: <code>{e}</code>", reply_markup=back_to_main_keyboard())
+    except Exception as e:
+        await query.message.answer(f"❌ Failed to initialize QR login: <code>{e}</code>", reply_markup=back_to_main_keyboard())
+    finally:
+        current_state = await state.get_state()
+        if current_state != GenerateStates.waiting_password.state and client.is_connected():
+            await client.disconnect()
 
 @router.callback_query(F.data.in_(["gen_pyrogram", "gen_telethon"]))
 async def cb_choose_lib(query: CallbackQuery, state: FSMContext):
