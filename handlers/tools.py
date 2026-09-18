@@ -134,22 +134,12 @@ async def cb_tool_select_account(query: CallbackQuery, state: FSMContext):
 
 @router.callback_query(F.data.in_(["a_read_otp", "input_readotp"]))
 async def cb_a_read_otp(query: CallbackQuery, state: FSMContext):
-    user_id = query.from_user.id
-    if query.data == "a_read_otp":
-        accounts = await db.get_user_accounts(user_id)
-        if accounts:
-            await query.message.edit_text(
-                "📂 <b>📩 Read OTP</b>\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nSelect a saved account from your vault or upload a file:",
-                reply_markup=make_tool_selection_keyboard(accounts, "readotp")
-            )
-            return
-
     await state.set_state(ToolStates.waiting_read_otp)
     text = """
-📂 <b>📩 Read OTP</b>
+<tg-emoji emoji-id="5341492148468465410">📂</tg-emoji> <b>📩 Read OTP</b>
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-⏳ <b>Waiting for files...</b>
+<tg-emoji emoji-id="5258113901106580375">⏳</tg-emoji> <b>Waiting for files...</b>
 
 Please send files (<code>.session</code>, <code>.zip</code>, <code>.json</code>, <code>.tdata</code>) or session string to read latest Telegram OTP.
 """.strip()
@@ -202,22 +192,12 @@ async def execute_read_otp(message: Message, raw_session: str):
 
 @router.callback_query(F.data.in_(["a_check", "tool_check_health", "input_health"]))
 async def cb_quick_health(query: CallbackQuery, state: FSMContext):
-    user_id = query.from_user.id
-    if query.data in ["a_check", "tool_check_health"]:
-        accounts = await db.get_user_accounts(user_id)
-        if accounts:
-            await query.message.edit_text(
-                "📂 <b>🔍 Check Sessions</b>\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nSelect a saved account from your vault or upload a file:",
-                reply_markup=make_tool_selection_keyboard(accounts, "health")
-            )
-            return
-
     await state.set_state(ToolStates.waiting_health_session)
     text = """
-📂 <b>🔍 Check Sessions</b>
+<tg-emoji emoji-id="5341492148468465410">📂</tg-emoji> <b>🔍 Check Sessions</b>
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-⏳ <b>Waiting for files...</b>
+<tg-emoji emoji-id="5258113901106580375">⏳</tg-emoji> <b>Waiting for files...</b>
 
 Please send files (<code>.session</code>, <code>.zip</code>, <code>.json</code>, <code>.tdata</code>) or session string to begin.
 """.strip()
@@ -305,22 +285,12 @@ async def execute_health_check(message: Message, raw_session: str):
 
 @router.callback_query(F.data.in_(["a_spam", "tool_check_spambot", "input_spam"]))
 async def cb_tool_spambot(query: CallbackQuery, state: FSMContext):
-    user_id = query.from_user.id
-    if query.data in ["a_spam", "tool_check_spambot"]:
-        accounts = await db.get_user_accounts(user_id)
-        if accounts:
-            await query.message.edit_text(
-                "📂 <b>🛡️ Spam Check</b>\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nSelect a saved account from your vault or upload a file:",
-                reply_markup=make_tool_selection_keyboard(accounts, "spam")
-            )
-            return
-
     await state.set_state(ToolStates.waiting_spambot_session)
     text = """
-📂 <b>🛡️ Spam Check</b>
+<tg-emoji emoji-id="5341492148468465410">📂</tg-emoji> <b>🛡️ Spam Check</b>
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-⏳ <b>Waiting for files...</b>
+<tg-emoji emoji-id="5258113901106580375">⏳</tg-emoji> <b>Waiting for files...</b>
 
 Please send files (<code>.session</code>, <code>.zip</code>, <code>.json</code>, <code>.tdata</code>) or session string to check account spam status.
 """.strip()
@@ -368,22 +338,12 @@ async def execute_spambot_check(message: Message, raw_session: str):
 
 @router.callback_query(F.data.in_(["a_contact", "input_contact"]))
 async def cb_a_contact(query: CallbackQuery, state: FSMContext):
-    user_id = query.from_user.id
-    if query.data == "a_contact":
-        accounts = await db.get_user_accounts(user_id)
-        if accounts:
-            await query.message.edit_text(
-                "📂 <b>📇 Contact Tool</b>\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nSelect a saved account from your vault or upload a file:",
-                reply_markup=make_tool_selection_keyboard(accounts, "contact")
-            )
-            return
-
     await state.set_state(ToolStates.waiting_contact)
     text = """
-📂 <b>📇 Contact Tool</b>
+<tg-emoji emoji-id="5341492148468465410">📂</tg-emoji> <b>📇 Contact Tool</b>
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-⏳ <b>Waiting for files...</b>
+<tg-emoji emoji-id="5258113901106580375">⏳</tg-emoji> <b>Waiting for files...</b>
 
 Please send files (<code>.session</code>, <code>.zip</code>, <code>.json</code>) or session string to inspect or clean account contacts.
 """.strip()
@@ -451,22 +411,12 @@ async def cb_action_del_contacts(query: CallbackQuery):
 
 @router.callback_query(F.data.in_(["a_2fa", "tool_check_2fa", "input_2fa"]))
 async def cb_a_2fa(query: CallbackQuery, state: FSMContext):
-    user_id = query.from_user.id
-    if query.data in ["a_2fa", "tool_check_2fa"]:
-        accounts = await db.get_user_accounts(user_id)
-        if accounts:
-            await query.message.edit_text(
-                "📂 <b>🔐 2FA Manager</b>\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nSelect a saved account from your vault or upload a file:",
-                reply_markup=make_tool_selection_keyboard(accounts, "2fa")
-            )
-            return
-
     await state.set_state(ToolStates.waiting_2fa_session)
     text = """
-📂 <b>🔐 2FA Manager</b>
+<tg-emoji emoji-id="5341492148468465410">📂</tg-emoji> <b>🔐 2FA Manager</b>
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-⏳ <b>Waiting for files...</b>
+<tg-emoji emoji-id="5258113901106580375">⏳</tg-emoji> <b>Waiting for files...</b>
 
 Please send files (<code>.session</code>, <code>.zip</code>, <code>.json</code>) or session string to check or manage Two-Step Verification.
 """.strip()
@@ -671,22 +621,12 @@ async def process_merge_text(message: Message, state: FSMContext):
 
 @router.callback_query(F.data.in_(["a_privacy", "tool_privacy", "input_privacy"]))
 async def cb_tool_privacy(query: CallbackQuery, state: FSMContext):
-    user_id = query.from_user.id
-    if query.data in ["a_privacy", "tool_privacy"]:
-        accounts = await db.get_user_accounts(user_id)
-        if accounts:
-            await query.message.edit_text(
-                "📂 <b>👁️ Privacy Settings</b>\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nSelect a saved account from your vault or upload a file:",
-                reply_markup=make_tool_selection_keyboard(accounts, "privacy")
-            )
-            return
-
     await state.set_state(ToolStates.waiting_privacy_session)
     text = """
-📂 <b>👁️ Privacy Settings</b>
+<tg-emoji emoji-id="5341492148468465410">📂</tg-emoji> <b>👁️ Privacy Settings</b>
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-⏳ <b>Waiting for files...</b>
+<tg-emoji emoji-id="5258113901106580375">⏳</tg-emoji> <b>Waiting for files...</b>
 
 Please send files (<code>.session</code>, <code>.zip</code>, <code>.json</code>) or session string to audit account privacy settings.
 """.strip()
@@ -736,10 +676,10 @@ async def execute_privacy_check(message: Message, raw_session: str):
 async def cb_tool_check_age(query: CallbackQuery, state: FSMContext):
     await state.set_state(ToolStates.waiting_age_session)
     text = """
-📂 <b>📅 Check Age</b>
+<tg-emoji emoji-id="5341492148468465410">📂</tg-emoji> <b>📅 Check Age</b>
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-⏳ <b>Waiting for files...</b>
+<tg-emoji emoji-id="5258113901106580375">⏳</tg-emoji> <b>Waiting for files...</b>
 
 Please send Telegram User ID or session file (<code>.session</code>, <code>.zip</code>, <code>.json</code>) to check registration date.
 """.strip()
@@ -795,22 +735,12 @@ async def execute_age_check(message: Message, val: str):
 
 @router.callback_query(F.data.in_(["a_convert", "tool_converter", "input_convert"]))
 async def cb_tool_converter(query: CallbackQuery, state: FSMContext):
-    user_id = query.from_user.id
-    if query.data in ["a_convert", "tool_converter"]:
-        accounts = await db.get_user_accounts(user_id)
-        if accounts:
-            await query.message.edit_text(
-                "📂 <b>🔀 Session Converter</b>\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nSelect a saved account from your vault or upload a file:",
-                reply_markup=make_tool_selection_keyboard(accounts, "convert")
-            )
-            return
-
     await state.set_state(ToolStates.waiting_convert_session)
     text = """
-📂 <b>🔀 Session Converter</b>
+<tg-emoji emoji-id="5341492148468465410">📂</tg-emoji> <b>🔄 Converter</b>
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-⏳ <b>Waiting for files...</b>
+<tg-emoji emoji-id="5258113901106580375">⏳</tg-emoji> <b>Waiting for files...</b>
 
 Please send files (<code>.session</code>, <code>.json</code>) or session string to convert between Pyrogram and Telethon format.
 """.strip()
@@ -861,22 +791,12 @@ async def execute_converter(message: Message, raw_session: str):
 
 @router.callback_query(F.data.in_(["c_leavegc", "tool_leave_chats", "input_leavegc"]))
 async def cb_tool_leave(query: CallbackQuery, state: FSMContext):
-    user_id = query.from_user.id
-    if query.data in ["c_leavegc", "tool_leave_chats"]:
-        accounts = await db.get_user_accounts(user_id)
-        if accounts:
-            await query.message.edit_text(
-                "📂 <b>🚪 Leave Groups & Channels</b>\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nSelect a saved account from your vault or upload a file:",
-                reply_markup=make_tool_selection_keyboard(accounts, "leavegc")
-            )
-            return
-
     await state.set_state(ToolStates.waiting_leave_session)
     text = """
-📂 <b>🚪 Leave Groups & Channels</b>
+<tg-emoji emoji-id="5341492148468465410">📂</tg-emoji> <b>🚪 Leave Groups & Channels</b>
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-⏳ <b>Waiting for files...</b>
+<tg-emoji emoji-id="5258113901106580375">⏳</tg-emoji> <b>Waiting for files...</b>
 
 Please send files (<code>.session</code>, <code>.zip</code>, <code>.json</code>) or session string to leave all channels and groups.
 """.strip()
@@ -916,22 +836,12 @@ async def execute_leave_chats(message: Message, raw_session: str):
 
 @router.callback_query(F.data.in_(["a_clear", "tool_delete_dialogs", "input_clear"]))
 async def cb_tool_delete_dialogs(query: CallbackQuery, state: FSMContext):
-    user_id = query.from_user.id
-    if query.data in ["a_clear", "tool_delete_dialogs"]:
-        accounts = await db.get_user_accounts(user_id)
-        if accounts:
-            await query.message.edit_text(
-                "📂 <b>🗑️ Clear Data</b>\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nSelect a saved account from your vault or upload a file:",
-                reply_markup=make_tool_selection_keyboard(accounts, "clear")
-            )
-            return
-
     await state.set_state(ToolStates.waiting_delete_dialogs_session)
     text = """
-📂 <b>🗑️ Clear Data</b>
+<tg-emoji emoji-id="5341492148468465410">📂</tg-emoji> <b>🗑️ Clear Data</b>
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-⏳ <b>Waiting for files...</b>
+<tg-emoji emoji-id="5258113901106580375">⏳</tg-emoji> <b>Waiting for files...</b>
 
 Please send files (<code>.session</code>, <code>.zip</code>, <code>.json</code>) or session string to delete all private dialogs and chats.
 """.strip()
