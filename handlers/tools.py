@@ -48,6 +48,43 @@ Select an operation below or choose from the main dashboard:
         pass
     await query.message.edit_text(text, reply_markup=tools_menu_keyboard())
 
+async def extract_session_from_msg(message: Message) -> str | None:
+    """Extract single session string from text or uploaded document (.session, .zip, .json, .txt)."""
+    if message.text:
+        return message.text.strip()
+    if message.document:
+        try:
+            file_io = io.BytesIO()
+            await message.bot.download(message.document, destination=file_io)
+            raw_bytes = file_io.getvalue()
+            filename = message.document.file_name or "account.session"
+            extracted = extract_all_sessions_from_bytes(filename, raw_bytes)
+            if extracted:
+                return extracted[0]["session"]
+        except Exception:
+            pass
+    return None
+
+async def extract_all_sessions_from_msg(message: Message) -> list[dict]:
+    """Extract all sessions from text (single/multi-line) or uploaded document (.zip, .session)."""
+    if message.text:
+        text = message.text.strip()
+        lines = [l.strip() for l in text.splitlines() if len(l.strip()) > 30]
+        if len(lines) > 1:
+            return [{"session": l, "filename": f"session_{i+1}.txt", "type": detect_session_type(l)} for i, l in enumerate(lines)]
+        elif lines:
+            return [{"session": lines[0], "filename": "input.txt", "type": detect_session_type(lines[0])}]
+    if message.document:
+        try:
+            file_io = io.BytesIO()
+            await message.bot.download(message.document, destination=file_io)
+            raw_bytes = file_io.getvalue()
+            filename = message.document.file_name or "account.session"
+            return extract_all_sessions_from_bytes(filename, raw_bytes)
+        except Exception:
+            pass
+    return []
+
 def make_tool_selection_keyboard(accounts: list, tool_code: str) -> InlineKeyboardMarkup:
     buttons = []
     for acc in accounts:
@@ -118,14 +155,18 @@ Please send files (<code>.session</code>, <code>.zip</code>, <code>.json</code>,
 """.strip()
     await query.message.edit_text(text, reply_markup=cancel_keyboard())
 
-@router.message(ToolStates.waiting_read_otp, F.text)
+@router.message(ToolStates.waiting_read_otp, F.text | F.document)
 async def process_read_otp_text(message: Message, state: FSMContext):
     if message.text and message.text.strip().lower() in ["/cancel", "cancel"]:
         await state.clear()
         await message.reply("Cancelled.", reply_markup=back_to_main_keyboard())
         return
 
-    raw_session = message.text.strip()
+    raw_session = await extract_session_from_msg(message)
+    if not raw_session:
+        await message.reply("❌ <b>Could not extract session!</b>\nPlease send a valid <code>.session</code> file or session string.", reply_markup=cancel_keyboard())
+        return
+
     try:
         await message.delete()
     except Exception:
@@ -182,20 +223,54 @@ Please send files (<code>.session</code>, <code>.zip</code>, <code>.json</code>,
 """.strip()
     await query.message.edit_text(text, reply_markup=cancel_keyboard())
 
-@router.message(ToolStates.waiting_health_session, F.text)
+@router.message(ToolStates.waiting_health_session, F.text | F.document)
 async def process_quick_health_text(message: Message, state: FSMContext):
     if message.text and message.text.strip().lower() in ["/cancel", "cancel"]:
         await state.clear()
         await message.reply("Cancelled.", reply_markup=back_to_main_keyboard())
         return
 
-    raw_session = message.text.strip()
+    sessions = await extract_all_sessions_from_msg(message)
+    if not sessions:
+        await message.reply("❌ <b>Could not extract session!</b>\nPlease send a valid <code>.session</code>, <code>.zip</code>, or session string.", reply_markup=cancel_keyboard())
+        return
+
     try:
         await message.delete()
     except Exception:
         pass
     await state.clear()
-    await execute_health_check(message, raw_session)
+
+    if len(sessions) == 1:
+        await execute_health_check(message, sessions[0]["session"])
+    else:
+        prog_msg = await message.answer(f"🔄 <i>Checking batch of {len(sessions)} sessions... Please wait.</i>")
+        alive_count = 0
+        dead_count = 0
+        report_lines = []
+        for s_item in sessions:
+            s_str = s_item["session"]
+            fname = s_item.get("filename", "session")
+            stype = detect_session_type(s_str)
+            info = await check_session_health(s_str, stype)
+            if info["status"] == "alive":
+                alive_count += 1
+                report_lines.append(f"🟢 <b>{fname}</b>: {info['name']} (<code>{info['phone']}</code>) - DC {info['dc_id']}")
+            else:
+                dead_count += 1
+                report_lines.append(f"🔴 <b>{fname}</b>: Dead ({info['error']})")
+
+        batch_report = f"""
+📊 <b>BATCH SESSION HEALTH REPORT</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📦 <b>Total Checked:</b> <code>{len(sessions)}</code>
+🟢 <b>Alive:</b> <code>{alive_count}</code>
+🔴 <b>Dead / Revoked:</b> <code>{dead_count}</code>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+""" + "\n".join(report_lines[:25])
+        if len(report_lines) > 25:
+            batch_report += f"\n<i>...and {len(report_lines) - 25} more.</i>"
+        await prog_msg.edit_text(batch_report, reply_markup=back_to_main_keyboard())
 
 async def execute_health_check(message: Message, raw_session: str):
     check_msg = await message.answer("🔄 <i>Testing session connection...</i>")
@@ -251,14 +326,18 @@ Please send files (<code>.session</code>, <code>.zip</code>, <code>.json</code>,
 """.strip()
     await query.message.edit_text(text, reply_markup=cancel_keyboard())
 
-@router.message(ToolStates.waiting_spambot_session, F.text)
+@router.message(ToolStates.waiting_spambot_session, F.text | F.document)
 async def process_spambot_session_text(message: Message, state: FSMContext):
     if message.text and message.text.strip().lower() in ["/cancel", "cancel"]:
         await state.clear()
         await message.reply("Cancelled.", reply_markup=back_to_main_keyboard())
         return
 
-    raw_session = message.text.strip()
+    raw_session = await extract_session_from_msg(message)
+    if not raw_session:
+        await message.reply("❌ <b>Could not extract session!</b>\nPlease send a valid <code>.session</code> file or session string.", reply_markup=cancel_keyboard())
+        return
+
     try:
         await message.delete()
     except Exception:
@@ -310,14 +389,18 @@ Please send files (<code>.session</code>, <code>.zip</code>, <code>.json</code>)
 """.strip()
     await query.message.edit_text(text, reply_markup=cancel_keyboard())
 
-@router.message(ToolStates.waiting_contact, F.text)
+@router.message(ToolStates.waiting_contact, F.text | F.document)
 async def process_contact_text(message: Message, state: FSMContext):
     if message.text and message.text.strip().lower() in ["/cancel", "cancel"]:
         await state.clear()
         await message.reply("Cancelled.", reply_markup=back_to_main_keyboard())
         return
 
-    raw_session = message.text.strip()
+    raw_session = await extract_session_from_msg(message)
+    if not raw_session:
+        await message.reply("❌ <b>Could not extract session!</b>\nPlease send a valid <code>.session</code> file or session string.", reply_markup=cancel_keyboard())
+        return
+
     try:
         await message.delete()
     except Exception:
@@ -389,14 +472,18 @@ Please send files (<code>.session</code>, <code>.zip</code>, <code>.json</code>)
 """.strip()
     await query.message.edit_text(text, reply_markup=cancel_keyboard())
 
-@router.message(ToolStates.waiting_2fa_session, F.text)
+@router.message(ToolStates.waiting_2fa_session, F.text | F.document)
 async def process_2fa_text(message: Message, state: FSMContext):
     if message.text and message.text.strip().lower() in ["/cancel", "cancel"]:
         await state.clear()
         await message.reply("Cancelled.", reply_markup=back_to_main_keyboard())
         return
 
-    raw_session = message.text.strip()
+    raw_session = await extract_session_from_msg(message)
+    if not raw_session:
+        await message.reply("❌ <b>Could not extract session!</b>\nPlease send a valid <code>.session</code> file or session string.", reply_markup=cancel_keyboard())
+        return
+
     try:
         await message.delete()
     except Exception:
@@ -445,22 +532,22 @@ Please send a <code>.zip</code> archive or multi-session file to split into sepa
 """.strip()
     await query.message.edit_text(text, reply_markup=cancel_keyboard())
 
-@router.message(ToolStates.waiting_split, F.text)
+@router.message(ToolStates.waiting_split, F.text | F.document)
 async def process_split_text(message: Message, state: FSMContext):
     if message.text and message.text.strip().lower() in ["/cancel", "cancel"]:
         await state.clear()
         await message.reply("Cancelled.", reply_markup=back_to_main_keyboard())
         return
 
-    text = message.text.strip()
+    sessions = await extract_all_sessions_from_msg(message)
     await state.clear()
-    lines = [l.strip() for l in text.splitlines() if len(l.strip()) > 40]
-    if not lines:
-        await message.reply("❌ No valid sessions detected in text.", reply_markup=back_to_main_keyboard())
+    if not sessions:
+        await message.reply("❌ No valid sessions detected.", reply_markup=back_to_main_keyboard())
         return
 
     files_dict = {}
-    for idx, s in enumerate(lines, 1):
+    for idx, s_item in enumerate(sessions, 1):
+        s = s_item["session"]
         stype = detect_session_type(s)
         ext = "telethon" if stype == "telethon" else "pyrogram"
         files_dict[f"session_{idx}_{ext}.session"] = s
@@ -490,14 +577,18 @@ Please send files (<code>.session</code>, <code>.json</code>) or session string 
 """.strip()
     await query.message.edit_text(text, reply_markup=cancel_keyboard())
 
-@router.message(ToolStates.waiting_api_link, F.text)
+@router.message(ToolStates.waiting_api_link, F.text | F.document)
 async def process_api_link_text(message: Message, state: FSMContext):
     if message.text and message.text.strip().lower() in ["/cancel", "cancel"]:
         await state.clear()
         await message.reply("Cancelled.", reply_markup=back_to_main_keyboard())
         return
 
-    raw_session = message.text.strip()
+    raw_session = await extract_session_from_msg(message)
+    if not raw_session:
+        await message.reply("❌ <b>Could not extract session!</b>\nPlease send a valid <code>.session</code> file or session string.", reply_markup=cancel_keyboard())
+        return
+
     try:
         await message.delete()
     except Exception:
@@ -547,22 +638,22 @@ Please send <code>.session</code> or <code>.json</code> files (or multiple sessi
 """.strip()
     await query.message.edit_text(text, reply_markup=cancel_keyboard())
 
-@router.message(ToolStates.waiting_merge, F.text)
+@router.message(ToolStates.waiting_merge, F.text | F.document)
 async def process_merge_text(message: Message, state: FSMContext):
     if message.text and message.text.strip().lower() in ["/cancel", "cancel"]:
         await state.clear()
         await message.reply("Cancelled.", reply_markup=back_to_main_keyboard())
         return
 
-    text = message.text.strip()
+    sessions = await extract_all_sessions_from_msg(message)
     await state.clear()
-    lines = [l.strip() for l in text.splitlines() if len(l.strip()) > 40]
-    if not lines:
+    if not sessions:
         await message.reply("❌ No valid sessions found to merge.", reply_markup=back_to_main_keyboard())
         return
 
     files_dict = {}
-    for idx, s in enumerate(lines, 1):
+    for idx, s_item in enumerate(sessions, 1):
+        s = s_item["session"]
         files_dict[f"merged_session_{idx}.session"] = s
 
     files_dict["manifest.json"] = f'{{"total_sessions": {len(files_dict)}}}'
@@ -570,7 +661,7 @@ async def process_merge_text(message: Message, state: FSMContext):
     doc = BufferedInputFile(zip_bytes, filename="merged_sessions.zip")
     await message.answer_document(
         doc,
-        caption=f"📦 <b>MERGE COMPLETE!</b>\nConsolidated <code>{len(lines)}</code> sessions into single archive.",
+        caption=f"📦 <b>MERGE COMPLETE!</b>\nConsolidated <code>{len(files_dict)}</code> sessions into single archive.",
         reply_markup=back_to_main_keyboard()
     )
 
@@ -601,14 +692,18 @@ Please send files (<code>.session</code>, <code>.zip</code>, <code>.json</code>)
 """.strip()
     await query.message.edit_text(text, reply_markup=cancel_keyboard())
 
-@router.message(ToolStates.waiting_privacy_session, F.text)
+@router.message(ToolStates.waiting_privacy_session, F.text | F.document)
 async def process_privacy_session_text(message: Message, state: FSMContext):
     if message.text and message.text.strip().lower() in ["/cancel", "cancel"]:
         await state.clear()
         await message.reply("Cancelled.", reply_markup=back_to_main_keyboard())
         return
 
-    raw_session = message.text.strip()
+    raw_session = await extract_session_from_msg(message)
+    if not raw_session:
+        await message.reply("❌ <b>Could not extract session!</b>\nPlease send a valid <code>.session</code> file or session string.", reply_markup=cancel_keyboard())
+        return
+
     try:
         await message.delete()
     except Exception:
@@ -650,14 +745,18 @@ Please send Telegram User ID or session file (<code>.session</code>, <code>.zip<
 """.strip()
     await query.message.edit_text(text, reply_markup=cancel_keyboard())
 
-@router.message(ToolStates.waiting_age_session, F.text)
+@router.message(ToolStates.waiting_age_session, F.text | F.document)
 async def process_age_session_text(message: Message, state: FSMContext):
     if message.text and message.text.strip().lower() in ["/cancel", "cancel"]:
         await state.clear()
         await message.reply("Cancelled.", reply_markup=back_to_main_keyboard())
         return
 
-    val = message.text.strip()
+    val = await extract_session_from_msg(message)
+    if not val:
+        await message.reply("❌ Please send a valid Telegram User ID or session file.", reply_markup=cancel_keyboard())
+        return
+
     try:
         await message.delete()
     except Exception:
@@ -717,14 +816,18 @@ Please send files (<code>.session</code>, <code>.json</code>) or session string 
 """.strip()
     await query.message.edit_text(text, reply_markup=cancel_keyboard())
 
-@router.message(ToolStates.waiting_convert_session, F.text)
+@router.message(ToolStates.waiting_convert_session, F.text | F.document)
 async def process_convert_session_text(message: Message, state: FSMContext):
     if message.text and message.text.strip().lower() in ["/cancel", "cancel"]:
         await state.clear()
         await message.reply("Cancelled.", reply_markup=back_to_main_keyboard())
         return
 
-    raw_session = message.text.strip()
+    raw_session = await extract_session_from_msg(message)
+    if not raw_session:
+        await message.reply("❌ <b>Could not extract session!</b>\nPlease send a valid <code>.session</code> file or session string.", reply_markup=cancel_keyboard())
+        return
+
     try:
         await message.delete()
     except Exception:
@@ -779,14 +882,18 @@ Please send files (<code>.session</code>, <code>.zip</code>, <code>.json</code>)
 """.strip()
     await query.message.edit_text(text, reply_markup=cancel_keyboard())
 
-@router.message(ToolStates.waiting_leave_session, F.text)
+@router.message(ToolStates.waiting_leave_session, F.text | F.document)
 async def process_leave_session_text(message: Message, state: FSMContext):
     if message.text and message.text.strip().lower() in ["/cancel", "cancel"]:
         await state.clear()
         await message.reply("Cancelled.", reply_markup=back_to_main_keyboard())
         return
 
-    raw_session = message.text.strip()
+    raw_session = await extract_session_from_msg(message)
+    if not raw_session:
+        await message.reply("❌ <b>Could not extract session!</b>\nPlease send a valid <code>.session</code> file or session string.", reply_markup=cancel_keyboard())
+        return
+
     try:
         await message.delete()
     except Exception:
@@ -830,14 +937,18 @@ Please send files (<code>.session</code>, <code>.zip</code>, <code>.json</code>)
 """.strip()
     await query.message.edit_text(text, reply_markup=cancel_keyboard())
 
-@router.message(ToolStates.waiting_delete_dialogs_session, F.text)
+@router.message(ToolStates.waiting_delete_dialogs_session, F.text | F.document)
 async def process_delete_dialogs_text(message: Message, state: FSMContext):
     if message.text and message.text.strip().lower() in ["/cancel", "cancel"]:
         await state.clear()
         await message.reply("Cancelled.", reply_markup=back_to_main_keyboard())
         return
 
-    raw_session = message.text.strip()
+    raw_session = await extract_session_from_msg(message)
+    if not raw_session:
+        await message.reply("❌ <b>Could not extract session!</b>\nPlease send a valid <code>.session</code> file or session string.", reply_markup=cancel_keyboard())
+        return
+
     try:
         await message.delete()
     except Exception:
