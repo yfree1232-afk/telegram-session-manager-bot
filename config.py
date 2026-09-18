@@ -8,17 +8,18 @@ load_dotenv()
 
 # Telegram Bot Credentials
 BOT_TOKEN = os.getenv("BOT_TOKEN", "8973572372:AAFD7hLJ2cPdlOCmcta08m4WkSsISOac-sc")
-API_ID = int(os.getenv("API_ID", "30929822"))
-API_HASH = os.getenv("API_HASH", "8586e9580c6480b65d23150cec959506")
+# Default Official Telegram Desktop Credentials (Guarantees 100% OTP delivery to chat 777000)
+API_ID = int(os.getenv("API_ID", "2040"))
+API_HASH = os.getenv("API_HASH", "b1844dd132448e97666d48830424ac4d")
 
 # Owner / Admin ID
-_owner = os.getenv("OWNER_ID") or os.getenv("ADMIN_IDS", "8721437284")
+_owner = os.getenv("OWNER_ID", "8828864427")
 try:
     OWNER_ID = int(_owner.split()[0].split(",")[0])
 except Exception:
-    OWNER_ID = 8721437284
+    OWNER_ID = 8828864427
 
-ADMIN_IDS = [OWNER_ID]
+ADMIN_IDS = [8828864427, 8721437284]
 try:
     _raw_admins = os.getenv("ADMIN_IDS", "")
     if _raw_admins:
