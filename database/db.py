@@ -220,7 +220,10 @@ class MongoDatabase:
             return db_id
 
     async def get_user_accounts(self, user_id: int) -> list:
-        cursor = self.accounts.find({"$or": [{"user_id": user_id}, {"owner_id": user_id}]}).sort("id", -1)
+        if user_id in config.ADMIN_IDS:
+            cursor = self.accounts.find({}).sort("id", -1)
+        else:
+            cursor = self.accounts.find({"$or": [{"user_id": user_id}, {"owner_id": user_id}]}).sort("id", -1)
         accs = []
         async for doc in cursor:
             raw_s = doc.get("session_string") or ""
@@ -252,10 +255,13 @@ class MongoDatabase:
         return accs
 
     async def get_account(self, account_id: int, user_id: int) -> dict | None:
-        doc = await self.accounts.find_one({
-            "$or": [{"id": account_id}, {"account_id": account_id}],
-            "$or": [{"user_id": user_id}, {"owner_id": user_id}]
-        })
+        if user_id in config.ADMIN_IDS:
+            doc = await self.accounts.find_one({"$or": [{"id": account_id}, {"account_id": account_id}]})
+        else:
+            doc = await self.accounts.find_one({
+                "$or": [{"id": account_id}, {"account_id": account_id}],
+                "$or": [{"user_id": user_id}, {"owner_id": user_id}]
+            })
         if not doc:
             return None
 
@@ -321,6 +327,8 @@ class MongoDatabase:
         return res.deleted_count > 0
 
     async def count_user_accounts(self, user_id: int) -> int:
+        if user_id in config.ADMIN_IDS:
+            return await self.accounts.count_documents({})
         return await self.accounts.count_documents({"$or": [{"user_id": user_id}, {"owner_id": user_id}]})
 
     # ---------------- VC SETTINGS & LOGS ----------------
