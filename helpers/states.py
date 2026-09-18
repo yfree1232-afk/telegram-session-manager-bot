@@ -7,6 +7,7 @@ class GenerateStates(StatesGroup):
     waiting_phone = State()
     waiting_otp = State()
     waiting_2fa = State()
+    waiting_password = State()
 
 class DeviceStates(StatesGroup):
     waiting_session = State()
