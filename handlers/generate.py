@@ -51,11 +51,12 @@ Kripya select karein aapko kis library ka String Session generate karna hai:
 @router.callback_query(F.data.in_(["gen_pyrogram", "gen_telethon"]))
 async def cb_choose_lib(query: CallbackQuery, state: FSMContext):
     session_type = "pyrogram" if query.data == "gen_pyrogram" else "telethon"
+    fp = DEVICE_FINGERPRINTS["default"]
     await state.update_data(
         session_type=session_type,
         fp_key="default",
-        api_id=config.API_ID,
-        api_hash=config.API_HASH
+        api_id=fp.get("api_id", config.API_ID),
+        api_hash=fp.get("api_hash", config.API_HASH)
     )
     await state.set_state(GenerateStates.waiting_phone)
     text = f"""
@@ -133,7 +134,10 @@ async def cb_api_choice(query: CallbackQuery, state: FSMContext):
             reply_markup=cancel_keyboard()
         )
     else:
-        await state.update_data(api_id=config.API_ID, api_hash=config.API_HASH)
+        data = await state.get_data()
+        fp_key = data.get("fp_key", "default")
+        fp = DEVICE_FINGERPRINTS.get(fp_key, DEVICE_FINGERPRINTS["default"])
+        await state.update_data(api_id=fp.get("api_id", config.API_ID), api_hash=fp.get("api_hash", config.API_HASH))
         await state.set_state(GenerateStates.waiting_phone)
         await query.message.edit_text(
             "📞 <b>Enter your Phone Number:</b>\n\n"
@@ -209,8 +213,8 @@ async def process_phone(message: Message, state: FSMContext):
     session_type = data.get("session_type", "pyrogram")
     fp_key = data.get("fp_key", "default")
     fp = DEVICE_FINGERPRINTS.get(fp_key, DEVICE_FINGERPRINTS["default"])
-    api_id = data.get("api_id", config.API_ID)
-    api_hash = data.get("api_hash", config.API_HASH)
+    api_id = data.get("api_id") or fp.get("api_id", config.API_ID)
+    api_hash = data.get("api_hash") or fp.get("api_hash", config.API_HASH)
     user_id = message.from_user.id
 
     status_msg = await message.reply("🔄 <i>Connecting to Telegram & requesting login code...</i>")
