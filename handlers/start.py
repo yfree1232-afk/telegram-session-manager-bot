@@ -87,9 +87,20 @@ async def cb_back_main(query: CallbackQuery, state: FSMContext):
         await query.answer()
     except Exception:
         pass
-    await query.message.edit_text(
-        START_TEXT,
-        reply_markup=main_menu_keyboard(config.OWNER_ID, user.id, acc_count),
-        disable_web_page_preview=True
-    )
+    try:
+        await query.message.edit_text(
+            START_TEXT,
+            reply_markup=main_menu_keyboard(config.OWNER_ID, user.id, acc_count),
+            disable_web_page_preview=True
+        )
+    except Exception:
+        try:
+            await query.message.delete()
+        except Exception:
+            pass
+        await query.message.answer(
+            START_TEXT,
+            reply_markup=main_menu_keyboard(config.OWNER_ID, user.id, acc_count),
+            disable_web_page_preview=True
+        )
 
