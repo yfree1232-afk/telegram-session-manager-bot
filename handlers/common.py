@@ -32,13 +32,13 @@ async def cleanup_user_login(user_id: int):
             pass
 
 START_TEXT = """
-✨ <b>WELCOME TO ICE BOT</b>
+<tg-emoji emoji-id="5931718859366075705">✨</tg-emoji> <b>WELCOME TO ICE BOT</b>
 ━━━━━━━━━━━━━━━━━━━━
 
-🛡️ Trusted workspace • 100% safe handling
-🟢 Free mode active
-📥 Upload <code>.session</code>, <code>.zip</code>, or <code>.json</code> to begin.
-💠 Choose any operation from the menu below.
+<tg-emoji emoji-id="5926906120877640711">🛡️</tg-emoji> Trusted workspace • 100% safe handling
+<tg-emoji emoji-id="5852777287451151788">🟢</tg-emoji> Free mode active
+<tg-emoji emoji-id="5931723180103175243">📥</tg-emoji> Upload <code>.session</code>, <code>.zip</code>, or <code>.json</code> to begin.
+<tg-emoji emoji-id="5971867376130461576">💠</tg-emoji> Choose any operation from the menu below.
 """.strip()
 
 HELP_TEXT = """
