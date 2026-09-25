@@ -26,7 +26,7 @@ async def cb_admin_panel(query: CallbackQuery):
 """
     buttons = [
         [InlineKeyboardButton(text="📢 ʙʀᴏᴀᴅᴄᴀsᴛ ᴍᴇssᴀɢᴇ", callback_data="admin_broadcast", icon_custom_emoji_id="5445284980978621387")],
-        [InlineKeyboardButton(text="🔙 ʙᴀᴄᴋ ᴛᴏ ᴍᴇɴᴜ", callback_data="back_main", icon_custom_emoji_id="5465665476988315663")]
+        [InlineKeyboardButton(text="🔙 ʙᴀᴄᴋ ᴛᴏ ᴍᴇɴᴜ", callback_data="back_main", icon_custom_emoji_id="5458754535289791569")]
     ]
     await query.message.edit_text(text, reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons))
 
