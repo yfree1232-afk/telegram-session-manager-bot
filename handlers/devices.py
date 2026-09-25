@@ -21,7 +21,7 @@ async def cb_menu_devices(query: CallbackQuery, state: FSMContext):
     await state.clear()
     is_term = query.data == "a_term"
     title = "Terminate All" if is_term else ("Kill Sessions" if query.data == "a_kill" else "Active Devices & Terminate")
-    emoji_id = "5465665476988315663" if (is_term or query.data == "a_kill") else "5409180749876174620"
+    emoji_id = "5458754535289791569" if (is_term or query.data == "a_kill") else "5408846628763217930"
     text = f"""
 <tg-emoji emoji-id="5409111052719767901">📁</tg-emoji> <tg-emoji emoji-id="{emoji_id}">⚡</tg-emoji> <b>{title}</b>
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -94,7 +94,7 @@ async def cb_src_vault_devices(query: CallbackQuery):
     buttons.append([InlineKeyboardButton(text="Back", callback_data="menu_devices")])
 
     await query.message.edit_text(
-        "<tg-emoji emoji-id=\"5409180749876174620\">👤</tg-emoji> <b>Select an account from your Vault:</b>",
+        "<tg-emoji emoji-id=\"5408846628763217930\">👤</tg-emoji> <b>Select an account from your Vault:</b>",
         reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons)
     )
 
@@ -126,7 +126,7 @@ async def show_devices_view(user_id: int, message: Message, raw_session: str, se
         "type": session_type
     }
 
-    text = f"<tg-emoji emoji-id=\"5409180749876174620\">📱</tg-emoji> <b>Total Active Logins:</b> <code>{len(authorizations)}</code>\n"
+    text = f"<tg-emoji emoji-id=\"5408846628763217930\">📱</tg-emoji> <b>Total Active Logins:</b> <code>{len(authorizations)}</code>\n"
     text += f"<tg-emoji emoji-id=\"5445284980978621387\">⚡</tg-emoji> <b>Engine:</b> <code>{session_type.upper()}</code>\n"
     text += "━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
 
@@ -196,7 +196,7 @@ async def cb_confirm_term_all(query: CallbackQuery):
         await status_msg.edit_text(
             "<tg-emoji emoji-id=\"5219774501876671323\">✅</tg-emoji> <b>SUCCESS!</b>\n\n"
             "<i>Saare dusre devices aur unauthorized sessions ko safalta-purvak terminate kar diya gaya hai!</i>\n\n"
-            "<tg-emoji emoji-id=\"5420319635037775013\">🛡️</tg-emoji> Aapka account ab surakshit hai.",
+            "<tg-emoji emoji-id=\"5409320020058584473\">🛡️</tg-emoji> Aapka account ab surakshit hai.",
             reply_markup=back_to_main_keyboard()
         )
     else:
