@@ -48,7 +48,7 @@ Apne account ka session generate karne ke tareeqe:
 • <b>Zero OTP wait:</b> Instant 1-second login!
 • Telegram App ➔ <b>Settings > Devices > Link Desktop Device</b> se scan karein.
 
-<tg-emoji emoji-id="5406935634575124018">📩</tg-emoji> <b>2. ᴘʏʀᴏɢʀᴀᴍ / ᴛᴇʟᴇᴛʜᴏɴ (ᴘʜᴏɴᴇ ᴏᴛᴘ):</b>
+<tg-emoji emoji-id="5409230963911701228">📩</tg-emoji> <b>2. ᴘʏʀᴏɢʀᴀᴍ / ᴛᴇʟᴇᴛʜᴏɴ (ᴘʜᴏɴᴇ ᴏᴛᴘ):</b>
 • Phone number enter karke official Telegram App (Chat 777000) me OTP mangwayein.
 """.strip()
     try:
