@@ -37,16 +37,16 @@ async def cb_menu_vault(query: CallbackQuery, state: FSMContext = None):
     buttons = []
     if accounts:
         for acc in accounts:
-            btn_text = f"👤 {acc['account_name']} ({acc['session_type'].capitalize()})"
+            btn_text = f"{acc['account_name']} ({acc['session_type'].capitalize()})"
             buttons.append([InlineKeyboardButton(text=btn_text, callback_data=f"manage_acc_{acc['id']}", icon_custom_emoji_id="5409180749876174620")])
 
     buttons.append([
-        InlineKeyboardButton(text="➕ ᴀᴅᴅ ᴀᴄᴄᴏᴜɴᴛ", callback_data="vault_add_acc", icon_custom_emoji_id="5445284980978621387"),
-        InlineKeyboardButton(text="🔍 ᴄʜᴇᴄᴋ ᴀʟʟ ʜᴇᴀʟᴛʜ", callback_data="vault_check_all", icon_custom_emoji_id="5427009714745511175")
+        InlineKeyboardButton(text="ᴀᴅᴅ ᴀᴄᴄᴏᴜɴᴛ", callback_data="vault_add_acc", icon_custom_emoji_id="5445284980978621387"),
+        InlineKeyboardButton(text="ᴄʜᴇᴄᴋ ᴀʟʟ ʜᴇᴀʟᴛʜ", callback_data="vault_check_all", icon_custom_emoji_id="5427009714745511175")
     ])
     if accounts:
-        buttons.append([InlineKeyboardButton(text="📤 ᴇxᴘᴏʀᴛ ᴠᴀᴜʟᴛ (ʙᴀᴄᴋᴜᴘ)", callback_data="vault_export", icon_custom_emoji_id="5465451996544837861")])
-    buttons.append([InlineKeyboardButton(text="🔙 ʙᴀᴄᴋ ᴛᴏ ᴍᴇɴᴜ", callback_data="back_main", icon_custom_emoji_id="5465665476988315663")])
+        buttons.append([InlineKeyboardButton(text="ᴇxᴘᴏʀᴛ ᴠᴀᴜʟᴛ (ʙᴀᴄᴋᴜᴘ)", callback_data="vault_export", icon_custom_emoji_id="5465451996544837861")])
+    buttons.append([InlineKeyboardButton(text="ʙᴀᴄᴋ ᴛᴏ ᴍᴇɴᴜ", callback_data="back_main", icon_custom_emoji_id="5465665476988315663")])
 
     await query.message.edit_text(text, reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons))
 
