@@ -396,8 +396,8 @@ DEVICE_FINGERPRINTS = {
         "app_version": "5.2.2 x64",
         "lang_code": "en",
         "system_lang_code": "en-US",
-        "api_id": 2040,
-        "api_hash": "b1844f23573e270e4414b3254461aeea"
+        "api_id": config.API_ID,
+        "api_hash": config.API_HASH
     },
     "samsung": {
         "name": "Samsung Galaxy S24 Ultra",
@@ -429,8 +429,8 @@ DEVICE_FINGERPRINTS = {
         "app_version": "5.2.2 x64",
         "lang_code": "en",
         "system_lang_code": "en-US",
-        "api_id": 2040,
-        "api_hash": "b1844f23573e270e4414b3254461aeea"
+        "api_id": config.API_ID,
+        "api_hash": config.API_HASH
     },
     "macos": {
         "name": "Apple MacBook Pro M3",
@@ -440,8 +440,8 @@ DEVICE_FINGERPRINTS = {
         "app_version": "10.14.2",
         "lang_code": "en",
         "system_lang_code": "en-US",
-        "api_id": 2040,
-        "api_hash": "b1844f23573e270e4414b3254461aeea"
+        "api_id": config.API_ID,
+        "api_hash": config.API_HASH
     },
     "xiaomi": {
         "name": "Xiaomi 14 Pro",
@@ -582,16 +582,37 @@ async def read_latest_otp(session_str: str, session_type: str = "telethon"):
         full_msg = None
         msg_date = None
 
-        async for msg in client.iter_messages(777000, limit=5):
+        messages = []
+        try:
+            entity = await client.get_entity(777000)
+            messages = await client.get_messages(entity, limit=5)
+        except Exception:
+            try:
+                async for dialog in client.iter_dialogs(limit=30):
+                    if dialog.id == 777000:
+                        messages = await client.get_messages(dialog.id, limit=5)
+                        break
+            except Exception:
+                pass
+        
+        if not messages:
+            try:
+                async for msg in client.iter_messages(777000, limit=5):
+                    messages.append(msg)
+            except Exception:
+                pass
+
+        for msg in messages:
             if msg.text:
                 full_msg = msg.text
                 msg_date = msg.date.strftime("%Y-%m-%d %H:%M:%S UTC") if msg.date else "Recent"
-                import re
-                matches = re.findall(r'\b\d{5,6}\b', msg.text)
-                if matches:
-                    otp_found = matches[0]
+                match = re.search(r'(?:Login code|Web login code|code|код|kod|código)[:\s]+(\d{5,6})', msg.text, re.IGNORECASE)
+                if not match:
+                    match = re.search(r'\b(\d{5,6})\b', msg.text)
+                if match:
+                    otp_found = match.group(1) if match.groups() else match.group(0)
                     break
-                elif "code" in msg.text.lower():
+                elif "code" in msg.text.lower() or "kod" in msg.text.lower():
                     otp_found = msg.text
                     break
 
