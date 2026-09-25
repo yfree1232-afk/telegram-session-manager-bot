@@ -21,14 +21,13 @@ async def cb_menu_vault(query: CallbackQuery, state: FSMContext = None):
     accounts = await db.get_user_accounts(user_id)
 
     text = """
-╭━━━━━━━━━━━━━━━━━━━━╮
-│  💼 <b>ᴍʏ ᴀᴄᴄᴏᴜɴᴛ ᴠᴀᴜʟᴛ</b>  │
-╰━━━━━━━━━━━━━━━━━━━━╯
+<tg-emoji emoji-id="5409111052719767901">💼</tg-emoji> <b>MY ACCOUNT VAULT</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 <i>Aapke sabhi sessions AES-Fernet encrypted form me secure hain.</i>
 
 """
     if not accounts:
-        text += "📭 <i>Aapke vault me abhi koi account save nahi hai.</i>"
+        text += "<i>Aapke vault me abhi koi account save nahi hai.</i>"
     else:
         text += f"📊 <b>Total Accounts Saved:</b> <code>{len(accounts)}</code>\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
         for idx, acc in enumerate(accounts, start=1):
@@ -38,15 +37,15 @@ async def cb_menu_vault(query: CallbackQuery, state: FSMContext = None):
     if accounts:
         for acc in accounts:
             btn_text = f"{acc['account_name']} ({acc['session_type'].capitalize()})"
-            buttons.append([InlineKeyboardButton(text=btn_text, callback_data=f"manage_acc_{acc['id']}", icon_custom_emoji_id="5409180749876174620")])
+            buttons.append([InlineKeyboardButton(text=btn_text, callback_data=f"manage_acc_{acc['id']}")])
 
     buttons.append([
-        InlineKeyboardButton(text="ᴀᴅᴅ ᴀᴄᴄᴏᴜɴᴛ", callback_data="vault_add_acc", icon_custom_emoji_id="5445284980978621387"),
-        InlineKeyboardButton(text="ᴄʜᴇᴄᴋ ᴀʟʟ ʜᴇᴀʟᴛʜ", callback_data="vault_check_all", icon_custom_emoji_id="5427009714745511175")
+        InlineKeyboardButton(text="Add Account", callback_data="vault_add_acc"),
+        InlineKeyboardButton(text="Check All Health", callback_data="vault_check_all")
     ])
     if accounts:
-        buttons.append([InlineKeyboardButton(text="ᴇxᴘᴏʀᴛ ᴠᴀᴜʟᴛ (ʙᴀᴄᴋᴜᴘ)", callback_data="vault_export", icon_custom_emoji_id="5465451996544837861")])
-    buttons.append([InlineKeyboardButton(text="ʙᴀᴄᴋ ᴛᴏ ᴍᴇɴᴜ", callback_data="back_main", icon_custom_emoji_id="5465665476988315663")])
+        buttons.append([InlineKeyboardButton(text="Export Vault (Backup)", callback_data="vault_export")])
+    buttons.append([InlineKeyboardButton(text="Back to Menu", callback_data="back_main")])
 
     await query.message.edit_text(text, reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons))
 
@@ -60,11 +59,11 @@ async def cb_manage_acc(query: CallbackQuery):
         return
 
     text = f"""
-👤 <b>Account Card: {acc['account_name']}</b>
+<tg-emoji emoji-id="5409180749876174620">👤</tg-emoji> <b>Account Card: {acc['account_name']}</b>
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 📞 <b>Phone:</b> <code>{acc['phone'] or 'N/A'}</code>
 🆔 <b>User ID:</b> <code>{acc['tg_user_id'] or 'N/A'}</code>
-⚡ <b>Type:</b> <code>{acc['session_type'].upper()}</code>
+<tg-emoji emoji-id="5445284980978621387">⚡</tg-emoji> <b>Type:</b> <code>{acc['session_type'].upper()}</code>
 📅 <b>Added On:</b> <code>{acc['created_at'][:10]}</code>
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
@@ -80,54 +79,54 @@ async def cb_check_status(query: CallbackQuery):
         return
 
     await query.answer("Checking status...", show_alert=False)
-    status_msg = await query.message.reply("🔄 <i>Testing session connectivity...</i>")
+    status_msg = await query.message.reply("<tg-emoji emoji-id=\"5805429164253123352\">⏳</tg-emoji> <i>Testing session connectivity...</i>")
 
     info = await check_session_health(acc["raw_session"], acc["session_type"])
     if info["status"] == "alive":
         res_text = f"""
-🟢 <b>ACCOUNT IS ALIVE & HEALTHY!</b>
+<tg-emoji emoji-id="5415938190999594673">🟢</tg-emoji> <b>ACCOUNT IS ALIVE & HEALTHY!</b>
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 👤 <b>Name:</b> {info['name']}
 🆔 <b>User ID:</b> <code>{info['user_id']}</code>
 📞 <b>Phone:</b> <code>{info['phone']}</code>
 🌐 <b>DC ID:</b> {info['dc_id']}
-💎 <b>Premium:</b> {'Yes ⭐️' if info['is_premium'] else 'No'}
+<tg-emoji emoji-id="5406745015365943482">⭐</tg-emoji> <b>Premium:</b> {'Yes' if info['is_premium'] else 'No'}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
     else:
         res_text = f"""
-🔴 <b>ACCOUNT IS DEAD / INACTIVE!</b>
+<tg-emoji emoji-id="6269520996428943568">🔴</tg-emoji> <b>ACCOUNT IS DEAD / INACTIVE!</b>
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-⚠️ <b>Reason:</b> <code>{info['error']}</code>
+<tg-emoji emoji-id="5408943604829794451">⚠️</tg-emoji> <b>Reason:</b> <code>{info['error']}</code>
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 <i>Tip: Ye session Telegram server se revoke ya delete ho chuka hai.</i>
 """
-    await status_msg.edit_text(res_text, reply_markup=InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="🔙 Back to Account", callback_data=f"manage_acc_{acc_id}", icon_custom_emoji_id="5409180749876174620")]]))
+    await status_msg.edit_text(res_text, reply_markup=InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="Back to Account", callback_data=f"manage_acc_{acc_id}")]]))
 
 @router.callback_query(F.data.startswith("del_acc_confirm_"))
 async def cb_del_confirm(query: CallbackQuery):
     acc_id = int(query.data.split("_")[3])
     buttons = [
         [
-            InlineKeyboardButton(text="🗑️ ʏᴇs, ᴅᴇʟᴇᴛᴇ", callback_data=f"del_acc_exec_{acc_id}", icon_custom_emoji_id="5465665476988315663"),
-            InlineKeyboardButton(text="❌ ᴄᴀɴᴄᴇʟ", callback_data=f"manage_acc_{acc_id}", icon_custom_emoji_id="5465665476988315663")
+            InlineKeyboardButton(text="Yes, Delete", callback_data=f"del_acc_exec_{acc_id}"),
+            InlineKeyboardButton(text="Cancel", callback_data=f"manage_acc_{acc_id}")
         ]
     ]
-    await query.message.edit_text("⚠️ <b>Are you sure you want to remove this account from your Vault?</b>", reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons))
+    await query.message.edit_text("<tg-emoji emoji-id=\"5408943604829794451\">⚠️</tg-emoji> <b>Are you sure you want to remove this account from your Vault?</b>", reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons))
 
 @router.callback_query(F.data.startswith("del_acc_exec_"))
 async def cb_del_exec(query: CallbackQuery):
     acc_id = int(query.data.split("_")[3])
     user_id = query.from_user.id
     await db.delete_account(acc_id, user_id)
-    await query.answer("Account removed from vault 🗑️", show_alert=True)
+    await query.answer("Account removed from vault", show_alert=True)
     await cb_menu_vault(query, None)
 
 @router.callback_query(F.data == "vault_add_acc")
 async def cb_vault_add_acc(query: CallbackQuery, state: FSMContext):
     await state.set_state(VaultStates.waiting_session)
     await query.message.edit_text(
-        "📝 <b>Send the String Session you want to save:</b>\n\n"
+        "<tg-emoji emoji-id=\"5409111052719767901\">📁</tg-emoji> <b>Send the String Session you want to save:</b>\n\n"
         "<i>(Supports both Pyrogram v2 & Telethon string sessions)</i>\n\n"
         "Send /cancel to abort.",
         reply_markup=cancel_keyboard()
@@ -135,7 +134,7 @@ async def cb_vault_add_acc(query: CallbackQuery, state: FSMContext):
 
 @router.message(VaultStates.waiting_session, F.text | F.document)
 async def process_vault_add(message: Message, state: FSMContext):
-    if message.text and message.text.strip().lower() == "/cancel":
+    if message.text and message.text.strip().lower() in ["/cancel", "cancel"]:
         await state.clear()
         await message.reply("Cancelled.", reply_markup=back_to_main_keyboard())
         return
@@ -156,7 +155,7 @@ async def process_vault_add(message: Message, state: FSMContext):
             pass
 
     if not raw_session:
-        await message.reply("❌ <b>Could not extract session!</b>\nPlease send a valid <code>.session</code> file or session string.", reply_markup=cancel_keyboard())
+        await message.reply("<tg-emoji emoji-id=\"5796291784539639311\">❌</tg-emoji> <b>Could not extract session!</b>\nPlease send a valid <code>.session</code> file or session string.", reply_markup=cancel_keyboard())
         return
 
     try:
@@ -165,13 +164,13 @@ async def process_vault_add(message: Message, state: FSMContext):
         pass
     await state.clear()
 
-    verif_msg = await message.answer("🔄 <i>Verifying session...</i>")
+    verif_msg = await message.answer("<tg-emoji emoji-id=\"5805429164253123352\">⏳</tg-emoji> <i>Verifying session...</i>")
     stype = detect_session_type(raw_session)
     health = await check_session_health(raw_session, stype)
 
     if health["status"] != "alive":
         await verif_msg.edit_text(
-            f"❌ <b>Invalid or Dead Session!</b>\n\nError: <code>{health['error']}</code>",
+            f"<tg-emoji emoji-id=\"5796291784539639311\">❌</tg-emoji> <b>Invalid or Dead Session!</b>\n\nError: <code>{health['error']}</code>",
             reply_markup=back_to_main_keyboard()
         )
         return
@@ -186,11 +185,11 @@ async def process_vault_add(message: Message, state: FSMContext):
         raw_session=raw_session
     )
     await verif_msg.edit_text(
-        f"🎉 <b>ACCOUNT SAVED TO VAULT!</b>\n\n"
+        f"<tg-emoji emoji-id=\"5219774501876671323\">✅</tg-emoji> <b>ACCOUNT SAVED TO VAULT!</b>\n\n"
         f"👤 <b>Name:</b> {acc_name}\n"
         f"📞 <b>Phone:</b> <code>{health['phone']}</code>\n"
-        f"⚡ <b>Engine:</b> <code>{stype.upper()}</code>",
-        reply_markup=InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="💼 Open Vault", callback_data="menu_vault", icon_custom_emoji_id="5409180749876174620")]])
+        f"<tg-emoji emoji-id=\"5445284980978621387\">⚡</tg-emoji> <b>Engine:</b> <code>{stype.upper()}</code>",
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="Open Vault", callback_data="menu_vault")]])
     )
 
 @router.callback_query(F.data == "vault_check_all")
@@ -202,7 +201,7 @@ async def cb_vault_check_all(query: CallbackQuery):
         return
 
     await query.answer("Checking health...", show_alert=False)
-    progress_msg = await query.message.edit_text(f"⏳ <i>Checking {len(accounts)} accounts... Please wait.</i>")
+    progress_msg = await query.message.edit_text(f"<tg-emoji emoji-id=\"5805429164253123352\">⏳</tg-emoji> <i>Checking {len(accounts)} accounts... Please wait.</i>")
 
     report = "📊 <b>VAULT HEALTH REPORT</b>\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
     alive_cnt = 0
@@ -213,17 +212,17 @@ async def cb_vault_check_all(query: CallbackQuery):
         health = await check_session_health(full_acc["raw_session"], full_acc["session_type"])
         if health["status"] == "alive":
             alive_cnt += 1
-            report += f"{idx}. 🟢 <b>{acc['account_name']}</b> (<code>{acc['phone'] or 'N/A'}</code>) — <b>ALIVE</b>\n"
+            report += f"{idx}. <tg-emoji emoji-id=\"5415938190999594673\">🟢</tg-emoji> <b>{acc['account_name']}</b> (<code>{acc['phone'] or 'N/A'}</code>) — <b>ALIVE</b>\n"
         else:
             dead_cnt += 1
-            report += f"{idx}. 🔴 <b>{acc['account_name']}</b> — <b>DEAD</b> (<code>{health['error']}</code>)\n"
+            report += f"{idx}. <tg-emoji emoji-id=\"6269520996428943568\">🔴</tg-emoji> <b>{acc['account_name']}</b> — <b>DEAD</b> (<code>{health['error']}</code>)\n"
 
     report += "━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-    report += f"🟢 <b>Alive:</b> {alive_cnt} | 🔴 <b>Dead:</b> {dead_cnt}"
+    report += f"<tg-emoji emoji-id=\"5415938190999594673\">🟢</tg-emoji> <b>Alive:</b> {alive_cnt} | <tg-emoji emoji-id=\"6269520996428943568\">🔴</tg-emoji> <b>Dead:</b> {dead_cnt}"
 
     await progress_msg.edit_text(
         report,
-        reply_markup=InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="🔙 Back to Vault", callback_data="menu_vault", icon_custom_emoji_id="5409180749876174620")]])
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="Back to Vault", callback_data="menu_vault")]])
     )
 
 @router.callback_query(F.data == "vault_export")
@@ -250,6 +249,6 @@ async def cb_vault_export(query: CallbackQuery):
     await query.bot.send_document(
         chat_id=user_id,
         document=doc,
-        caption="🔐 <b>Here is your Vault Backup file!</b>\n\n<i>Keep this file completely confidential.</i>"
+        caption="<tg-emoji emoji-id=\"5420319635037775013\">🛡️</tg-emoji> <b>Here is your Vault Backup file!</b>\n\n<i>Keep this file completely confidential.</i>"
     )
-    await query.message.reply("✅ Backup file sent above!", reply_markup=InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="🔙 Back to Vault", callback_data="menu_vault", icon_custom_emoji_id="5409180749876174620")]]))
+    await query.message.reply("<tg-emoji emoji-id=\"5219774501876671323\">✅</tg-emoji> Backup file sent above!", reply_markup=InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="Back to Vault", callback_data="menu_vault")]]))
