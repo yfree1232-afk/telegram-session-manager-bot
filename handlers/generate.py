@@ -62,8 +62,8 @@ async def cb_gen_qr(query: CallbackQuery, state: FSMContext):
     status_msg = await query.message.answer("🔄 <i>Generating official Telegram QR Code... Please wait.</i>")
     client = TelegramClient(
         StringSession(),
-        2040,
-        "b1844f23573e270e4414b3254461aeea",
+        config.API_ID,
+        config.API_HASH,
         device_model="Telegram Desktop",
         system_version="Windows 11 x64",
         app_version="5.2.2 x64",
