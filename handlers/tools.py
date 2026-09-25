@@ -1,4 +1,5 @@
 import io
+import re
 from aiogram import Router, F
 from aiogram.fsm.context import FSMContext
 from aiogram.types import (
@@ -134,6 +135,25 @@ async def cb_tool_select_account(query: CallbackQuery, state: FSMContext):
 
 @router.callback_query(F.data.in_(["a_read_otp", "input_readotp"]))
 async def cb_a_read_otp(query: CallbackQuery, state: FSMContext):
+    user_id = query.from_user.id
+    accounts = await db.get_user_accounts(user_id)
+
+    if accounts and query.data != "input_readotp":
+        await state.clear()
+        buttons = []
+        for acc in accounts:
+            btn_text = f"👤 {acc['account_name']} ({acc['phone'] or 'Account'})"
+            buttons.append([InlineKeyboardButton(text=btn_text, callback_data=f"sel_readotp_{acc['id']}", icon_custom_emoji_id="5409180749876174620")])
+        buttons.append([InlineKeyboardButton(text="📥 ᴜᴘʟᴏᴀᴅ ғɪʟᴇ / ᴘᴀsᴛᴇ sᴛʀɪɴɢ", callback_data="input_readotp", icon_custom_emoji_id="5465451996544837861")])
+        buttons.append([InlineKeyboardButton(text="🔙 ʙᴀᴄᴋ ᴛᴏ ᴍᴇɴᴜ", callback_data="back_main", icon_custom_emoji_id="5465665476988315663")])
+        text = """
+📩 <b>READ TELEGRAM OTP</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Apne vault se account select karein jiska OTP read karna hai (Chat 777000 se), ya naya file upload karein:
+""".strip()
+        await query.message.edit_text(text, reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons))
+        return
+
     await state.set_state(ToolStates.waiting_read_otp)
     text = """
 <tg-emoji emoji-id="5341492148468465410">📂</tg-emoji> <b>📩 Read OTP</b>
@@ -1197,3 +1217,145 @@ async def handle_document_upload(message: Message, state: FSMContext):
 
     except Exception as e:
         await status_msg.edit_text(f"❌ Error processing file: <code>{e}</code>", reply_markup=back_to_main_keyboard())
+
+
+# =========================================================================
+# 💬 UNIVERSAL TEXT & DIRECT SESSION / PHONE DETECTOR
+# =========================================================================
+
+@router.message(F.text)
+async def handle_direct_text_message(message: Message, state: FSMContext):
+    # Ignore slash commands so command routers handle them
+    text = (message.text or "").strip()
+    if text.startswith("/"):
+        return
+
+    # Check if a state is already active; if so, state-specific handlers take precedence
+    current_state = await state.get_state()
+    if current_state:
+        return
+
+    user_id = message.from_user.id
+
+    # 1. Check if input is a phone number (e.g. +919876543210 or 9876543210)
+    clean_num = text.replace(" ", "").replace("-", "")
+    if (clean_num.startswith("+") and clean_num[1:].isdigit() and 8 <= len(clean_num) <= 16) or (clean_num.isdigit() and 10 <= len(clean_num) <= 14):
+        if not clean_num.startswith("+"):
+            clean_num = "+" + clean_num
+        btns = [
+            [InlineKeyboardButton(text="📷 ǫʀ ᴄᴏᴅᴇ ʟᴏɢɪɴ (ɴᴏ ᴏᴛᴘ ɴᴇᴇᴅᴇᴅ!)", callback_data="gen_qr", icon_custom_emoji_id="5445284980978621387")],
+            [InlineKeyboardButton(text="⚡ ᴘʏʀᴏɢʀᴀᴍ (ᴠ𝟸)", callback_data="gen_pyrogram", icon_custom_emoji_id="5445284980978621387"),
+             InlineKeyboardButton(text="⚡ ᴛᴇʟᴇᴛʜᴏɴ", callback_data="gen_telethon", icon_custom_emoji_id="5445284980978621387")],
+            [InlineKeyboardButton(text="🔙 ᴍᴀɪɴ ᴍᴇɴᴜ", callback_data="back_main", icon_custom_emoji_id="5465665476988315663")]
+        ]
+        msg = f"""
+📞 <b>Phone Number Detected:</b> <code>{clean_num}</code>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Session generate karne ke liye tarika chunein:
+
+🌟 <b>1. ǫʀ ᴄᴏᴅᴇ ʟᴏɢɪɴ (ʀᴇᴄᴏᴍᴍᴇɴᴅᴇᴅ):</b>
+• <b>Zero OTP / SMS:</b> Koi OTP wait nahi!
+• Apne Telegram app me <b>Settings > Devices > Link Desktop Device</b> se scan karein aur 1 sec me login ho jayega.
+
+📱 <b>2. ᴘʏʀᴏɢʀᴀᴍ / ᴛᴇʟᴇᴛʜᴏɴ:</b>
+• Official Telegram App (Chat 777000) me login OTP mangwayein.
+""".strip()
+        await message.reply(msg, reply_markup=InlineKeyboardMarkup(inline_keyboard=btns))
+        return
+
+    # 2. Check if input contains string session(s)
+    lines = [l.strip() for l in text.splitlines() if len(l.strip()) > 50]
+    is_session = False
+    if lines:
+        first = lines[0]
+        if (first.startswith("1") and len(first) > 150) or (len(first) > 100 and " " not in first):
+            is_session = True
+
+    if is_session:
+        status_msg = await message.reply("🔄 <i>Verifying session(s)... Please wait.</i>")
+        try:
+            await message.delete()
+        except Exception:
+            pass
+
+        saved_accs = []
+        errors = []
+
+        for idx, s in enumerate(lines, start=1):
+            stype = detect_session_type(s)
+            h = await check_session_health(s, stype)
+            if h.get("status") == "alive":
+                acc_name = h.get("name") or f"Account {idx}"
+                acc_id = await db.save_account(
+                    user_id=user_id,
+                    session_type=stype,
+                    account_name=acc_name,
+                    phone=h.get("phone") or "N/A",
+                    tg_user_id=h.get("user_id") or 0,
+                    raw_session=s
+                )
+                saved_accs.append({
+                    "id": acc_id,
+                    "name": acc_name,
+                    "phone": h.get("phone") or "N/A",
+                    "user_id": h.get("user_id"),
+                    "dc_id": h.get("dc_id"),
+                    "is_premium": h.get("is_premium"),
+                    "type": stype
+                })
+            else:
+                errors.append(f"Session {idx}: {h.get('error')}")
+
+        if len(lines) == 1 and saved_accs:
+            acc = saved_accs[0]
+            card = f"""
+🎉 <b>SESSION VERIFIED & SAVED TO VAULT!</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+👤 <b>Account:</b> {acc['name']}
+📞 <b>Phone:</b> <code>{acc['phone']}</code>
+🆔 <b>User ID:</b> <code>{acc['user_id']}</code>
+🌐 <b>Data Center:</b> DC {acc['dc_id']}
+💎 <b>Premium:</b> {'Yes ⭐️' if acc['is_premium'] else 'No'}
+⚡ <b>Engine:</b> <code>{acc['type'].upper()}</code>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+💾 <i>Session ultra-secure AES encryption ke sath vault me save ho gaya hai!</i>
+""".strip()
+            btns = [
+                [InlineKeyboardButton(text="📩 ʀᴇᴀᴅ ᴏᴛᴘ", callback_data=f"sel_readotp_{acc['id']}", icon_custom_emoji_id="5406935634575124018")],
+                [InlineKeyboardButton(text="🛡️ sᴘᴀᴍ ᴄʜᴇᴄᴋ", callback_data=f"sel_spam_{acc['id']}", icon_custom_emoji_id="5420319635037775013"),
+                 InlineKeyboardButton(text="📱 ᴛᴇʀᴍɪɴᴀᴛᴇ ᴏᴛʜᴇʀs", callback_data=f"sel_term_{acc['id']}", icon_custom_emoji_id="5465665476988315663")],
+                [InlineKeyboardButton(text="💼 ᴏᴘᴇɴ ᴠᴀᴜʟᴛ", callback_data="menu_vault", icon_custom_emoji_id="5409180749876174620"),
+                 InlineKeyboardButton(text="🔙 ᴍᴀɪɴ ᴍᴇɴᴜ", callback_data="back_main", icon_custom_emoji_id="5465665476988315663")]
+            ]
+            await status_msg.edit_text(card, reply_markup=InlineKeyboardMarkup(inline_keyboard=btns))
+            return
+        elif len(lines) > 1:
+            batch_text = f"""
+🎉 <b>BATCH SESSIONS PROCESSED!</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📁 <b>Total Received:</b> <code>{len(lines)}</code>
+🟢 <b>Alive & Saved to Vault:</b> <code>{len(saved_accs)}</code>
+🔴 <b>Dead / Invalid:</b> <code>{len(errors)}</code>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+"""
+            btns = [
+                [InlineKeyboardButton(text="💼 Open Vault", callback_data="menu_vault", icon_custom_emoji_id="5409180749876174620")],
+                [InlineKeyboardButton(text="🔙 Main Menu", callback_data="back_main", icon_custom_emoji_id="5465665476988315663")]
+            ]
+            await status_msg.edit_text(batch_text, reply_markup=InlineKeyboardMarkup(inline_keyboard=btns))
+            return
+        else:
+            err_msg = errors[0] if errors else "Invalid session format"
+            await status_msg.edit_text(
+                f"❌ <b>Session is Dead or Invalid!</b>\n\nTelegram Error: <code>{err_msg}</code>\n\n<i>Kripya live/valid session string bhejein ya QR code se naya generate karein.</i>",
+                reply_markup=back_to_main_keyboard()
+            )
+            return
+
+    # 3. If user typed standard conversation greetings like 'hi', 'hello'
+    acc_count = await db.count_user_accounts(user_id)
+    await message.reply(
+        "👋 <b>Namaste! Main ICE Bot Session Manager hoon.</b>\n\n"
+        "⚡ Niche diye gaye menu se koi bhi feature use karein, ya direct <code>.session</code> / <code>.zip</code> file bhejein:",
+        reply_markup=main_menu_keyboard(config.OWNER_ID, user_id, acc_count)
+    )
