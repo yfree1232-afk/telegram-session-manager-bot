@@ -20,12 +20,13 @@ router = Router()
 async def cb_menu_devices(query: CallbackQuery, state: FSMContext):
     await state.clear()
     is_term = query.data == "a_term"
-    title = "🚨 Terminate All" if is_term else ("🔥 Kill Sessions" if query.data == "a_kill" else "📱 Active Devices & Terminate")
+    title = "Terminate All" if is_term else ("Kill Sessions" if query.data == "a_kill" else "Active Devices & Terminate")
+    emoji_id = "5465665476988315663" if (is_term or query.data == "a_kill") else "5409180749876174620"
     text = f"""
-<tg-emoji emoji-id="5341492148468465410">📂</tg-emoji> <b>{title}</b>
+<tg-emoji emoji-id="5409111052719767901">📁</tg-emoji> <tg-emoji emoji-id="{emoji_id}">⚡</tg-emoji> <b>{title}</b>
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-<tg-emoji emoji-id="5258113901106580375">⏳</tg-emoji> <b>Waiting for files...</b>
+<tg-emoji emoji-id="5805429164253123352">⏳</tg-emoji> <b>Waiting for files...</b>
 
 Please send files (<code>.session</code>, <code>.json</code>) or session string to inspect and terminate active logins.
 """.strip()
@@ -37,7 +38,7 @@ Please send files (<code>.session</code>, <code>.json</code>) or session string 
 async def cb_src_paste_devices(query: CallbackQuery, state: FSMContext):
     await state.set_state(DeviceStates.waiting_session)
     await query.message.edit_text(
-        "📝 <b>Please send your String Session (Pyrogram or Telethon):</b>\n\n"
+        "<tg-emoji emoji-id=\"5409111052719767901\">📁</tg-emoji> <b>Please send your String Session (Pyrogram or Telethon):</b>\n\n"
         "<i>(Your session string will be deleted immediately from chat history for safety)</i>\n\n"
         "Send /cancel to abort.",
         reply_markup=cancel_keyboard()
@@ -45,7 +46,7 @@ async def cb_src_paste_devices(query: CallbackQuery, state: FSMContext):
 
 @router.message(DeviceStates.waiting_session, F.text | F.document)
 async def process_devices_session(message: Message, state: FSMContext):
-    if message.text and message.text.strip().lower() == "/cancel":
+    if message.text and message.text.strip().lower() in ["/cancel", "cancel"]:
         await state.clear()
         await message.reply("Cancelled.", reply_markup=back_to_main_keyboard())
         return
@@ -66,7 +67,7 @@ async def process_devices_session(message: Message, state: FSMContext):
             pass
 
     if not raw_session:
-        await message.reply("❌ <b>Could not extract session!</b>\nPlease send a valid <code>.session</code> file or session string.", reply_markup=cancel_keyboard())
+        await message.reply("<tg-emoji emoji-id=\"5796291784539639311\">❌</tg-emoji> <b>Could not extract session!</b>\nPlease send a valid <code>.session</code> file or session string.", reply_markup=cancel_keyboard())
         return
 
     try:
@@ -88,12 +89,12 @@ async def cb_src_vault_devices(query: CallbackQuery):
 
     buttons = []
     for acc in accounts:
-        btn_text = f"👤 {acc['account_name']} ({acc['session_type'].capitalize()})"
-        buttons.append([InlineKeyboardButton(text=btn_text, callback_data=f"seldev_acc_{acc['id']}", icon_custom_emoji_id="5409180749876174620")])
-    buttons.append([InlineKeyboardButton(text="🔙 Back", callback_data="menu_devices", icon_custom_emoji_id="5465665476988315663")])
+        btn_text = f"{acc['account_name']} ({acc['session_type'].capitalize()})"
+        buttons.append([InlineKeyboardButton(text=btn_text, callback_data=f"seldev_acc_{acc['id']}")])
+    buttons.append([InlineKeyboardButton(text="Back", callback_data="menu_devices")])
 
     await query.message.edit_text(
-        "💼 <b>Select an account from your Vault:</b>",
+        "<tg-emoji emoji-id=\"5409180749876174620\">👤</tg-emoji> <b>Select an account from your Vault:</b>",
         reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons)
     )
 
@@ -109,15 +110,15 @@ async def cb_select_vault_dev(query: CallbackQuery):
     await show_devices_view(user_id, query.message, account["raw_session"], account["session_type"])
 
 async def show_devices_view(user_id: int, message: Message, raw_session: str, session_type: str):
-    wait_msg = await message.answer("🔍 <i>Fetching active authorizations from Telegram...</i>")
+    wait_msg = await message.answer("<tg-emoji emoji-id=\"5805429164253123352\">⏳</tg-emoji> <i>Fetching active authorizations from Telegram...</i>")
     try:
         authorizations = await get_active_sessions(raw_session, session_type)
     except Exception as e:
-        await wait_msg.edit_text(f"❌ Failed to fetch sessions: <code>{e}</code>", reply_markup=back_to_main_keyboard())
+        await wait_msg.edit_text(f"<tg-emoji emoji-id=\"5796291784539639311\">❌</tg-emoji> Failed to fetch sessions: <code>{e}</code>", reply_markup=back_to_main_keyboard())
         return
 
     if not authorizations:
-        await wait_msg.edit_text("❌ No active sessions found or session is invalid/expired.", reply_markup=back_to_main_keyboard())
+        await wait_msg.edit_text("<tg-emoji emoji-id=\"5796291784539639311\">❌</tg-emoji> No active sessions found or session is invalid/expired.", reply_markup=back_to_main_keyboard())
         return
 
     INSPECT_CACHE[user_id] = {
@@ -125,12 +126,12 @@ async def show_devices_view(user_id: int, message: Message, raw_session: str, se
         "type": session_type
     }
 
-    text = f"📱 <b>Total Active Logins:</b> <code>{len(authorizations)}</code>\n"
-    text += f"⚡ <b>Engine:</b> <code>{session_type.upper()}</code>\n"
+    text = f"<tg-emoji emoji-id=\"5409180749876174620\">📱</tg-emoji> <b>Total Active Logins:</b> <code>{len(authorizations)}</code>\n"
+    text += f"<tg-emoji emoji-id=\"5445284980978621387\">⚡</tg-emoji> <b>Engine:</b> <code>{session_type.upper()}</code>\n"
     text += "━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
 
     for idx, auth in enumerate(authorizations, start=1):
-        curr_tag = " (⭐️ <b>THIS SESSION</b>)" if auth["current"] else ""
+        curr_tag = " (<tg-emoji emoji-id=\"5406745015365943482\">⭐</tg-emoji> <b>THIS SESSION</b>)" if auth["current"] else ""
         text += (
             f"<b>{idx}. {auth['device_model']}</b>{curr_tag}\n"
             f"• <b>App:</b> <code>{auth['app_name']} {auth['app_version']}</code>\n"
@@ -143,9 +144,9 @@ async def show_devices_view(user_id: int, message: Message, raw_session: str, se
     buttons = []
     for idx, auth in enumerate(authorizations, start=1):
         if not auth["current"]:
-            buttons.append([InlineKeyboardButton(text=f"❌ Kill {auth['device_model'][:18]}", callback_data=f"kill_single_{auth['hash']}", icon_custom_emoji_id="5465665476988315663")])
-    buttons.append([InlineKeyboardButton(text="🚨 Terminate All Other Sessions", callback_data="action_term_all", icon_custom_emoji_id="5465665476988315663")])
-    buttons.append([InlineKeyboardButton(text="✖️ Cancel", callback_data="cancel_pending_op", icon_custom_emoji_id="5465665476988315663")])
+            buttons.append([InlineKeyboardButton(text=f"Kill {auth['device_model'][:18]}", callback_data=f"kill_single_{auth['hash']}")])
+    buttons.append([InlineKeyboardButton(text="Terminate All Other Sessions", callback_data="action_term_all")])
+    buttons.append([InlineKeyboardButton(text="Cancel", callback_data="cancel_pending_op")])
     await wait_msg.edit_text(text, reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons))
 
 @router.callback_query(F.data.startswith("kill_single_"))
@@ -159,7 +160,7 @@ async def cb_kill_single(query: CallbackQuery):
     await query.answer("Terminating device...", show_alert=False)
     success, msg = await terminate_single_session(data["session"], data["type"], int(auth_hash))
     if success:
-        await query.answer("Session terminated successfully! 🗑️", show_alert=True)
+        await query.answer("Session terminated successfully!", show_alert=True)
         await show_devices_view(user_id, query.message, data["session"], data["type"])
     else:
         await query.answer(f"Failed: {msg}", show_alert=True)
@@ -172,8 +173,8 @@ async def cb_action_term_all(query: CallbackQuery):
         return
 
     text = """
-⚠️ <b>CONFIRM TERMINATION</b> ⚠️
-
+<tg-emoji emoji-id="5408943604829794451">⚠️</tg-emoji> <b>CONFIRM TERMINATION</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Kya aap sach me is session ke alawa <b>baaki sabhi devices ko logout</b> karna chahte hain?
 Iske baad baaki sabhi devices se Telegram account turant band ho jayega.
 """
@@ -188,19 +189,19 @@ async def cb_confirm_term_all(query: CallbackQuery):
 
     data = INSPECT_CACHE[user_id]
     await query.answer("Terminating sessions...", show_alert=False)
-    status_msg = await query.message.edit_text("⏳ <i>Terminating all other active sessions...</i>")
+    status_msg = await query.message.edit_text("<tg-emoji emoji-id=\"5805429164253123352\">⏳</tg-emoji> <i>Terminating all other active sessions...</i>")
 
     success, msg = await terminate_all_sessions(data["session"], data["type"])
     if success:
         await status_msg.edit_text(
-            "🎉 <b>SUCCESS!</b>\n\n"
-            "✅ <i>Saare dusre devices aur unauthorized sessions ko safalta-purvak terminate kar diya gaya hai!</i>\n\n"
-            "🛡️ Aapka account ab surakshit hai.",
+            "<tg-emoji emoji-id=\"5219774501876671323\">✅</tg-emoji> <b>SUCCESS!</b>\n\n"
+            "<i>Saare dusre devices aur unauthorized sessions ko safalta-purvak terminate kar diya gaya hai!</i>\n\n"
+            "<tg-emoji emoji-id=\"5420319635037775013\">🛡️</tg-emoji> Aapka account ab surakshit hai.",
             reply_markup=back_to_main_keyboard()
         )
     else:
         await status_msg.edit_text(
-            f"❌ <b>Error:</b> <code>{msg}</code>\n\n"
+            f"<tg-emoji emoji-id=\"5796291784539639311\">❌</tg-emoji> <b>Error:</b> <code>{msg}</code>\n\n"
             "<i>Note: Agar Telegram naya login detect karta hai, to security ke kaaran kuch ghante tak terminate block kar sakta hai.</i>",
             reply_markup=back_to_main_keyboard()
         )
