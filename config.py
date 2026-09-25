@@ -7,7 +7,7 @@ from cryptography.fernet import Fernet
 load_dotenv()
 
 # Telegram Bot Credentials
-BOT_TOKEN = os.getenv("BOT_TOKEN", "8973572372:AAFD7hLJ2cPdlOCmcta08m4WkSsISOac-sc")
+BOT_TOKEN = os.getenv("BOT_TOKEN", "8973572372:AAGBWhOoPbHBCgYwVnT_h4lXyVBAnypBjb4")
 # Telegram App Credentials (my.telegram.org verified developer API)
 API_ID = int(os.getenv("API_ID", "30929822"))
 API_HASH = os.getenv("API_HASH", "8586e9580c6480b65d23150cec959506")
