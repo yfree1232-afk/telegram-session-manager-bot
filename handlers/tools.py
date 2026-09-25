@@ -90,9 +90,9 @@ def make_tool_selection_keyboard(accounts: list, tool_code: str) -> InlineKeyboa
     buttons = []
     for acc in accounts:
         btn_text = f"{acc['account_name']} ({acc['phone']})"
-        buttons.append([InlineKeyboardButton(text=btn_text, callback_data=f"sel_{tool_code}_{acc['id']}", icon_custom_emoji_id="5409180749876174620")])
-    buttons.append([InlineKeyboardButton(text="ᴜᴘʟᴏᴀᴅ ғɪʟᴇ / ᴘᴀsᴛᴇ sᴛʀɪɴɢ", callback_data=f"input_{tool_code}", icon_custom_emoji_id="5465451996544837861")])
-    buttons.append([InlineKeyboardButton(text="ʙᴀᴄᴋ ᴛᴏ ᴍᴇɴᴜ", callback_data="back_main", icon_custom_emoji_id="5465665476988315663")])
+        buttons.append([InlineKeyboardButton(text=btn_text, callback_data=f"sel_{tool_code}_{acc['id']}")])
+    buttons.append([InlineKeyboardButton(text="Upload File / Paste String", callback_data=f"input_{tool_code}")])
+    buttons.append([InlineKeyboardButton(text="Back to Menu", callback_data="back_main")])
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 @router.callback_query(F.data.startswith("sel_"))
@@ -143,9 +143,9 @@ async def cb_a_read_otp(query: CallbackQuery, state: FSMContext):
         buttons = []
         for acc in accounts:
             btn_text = f"{acc['account_name']} ({acc['phone'] or 'Account'})"
-            buttons.append([InlineKeyboardButton(text=btn_text, callback_data=f"sel_readotp_{acc['id']}", icon_custom_emoji_id="5409180749876174620")])
-        buttons.append([InlineKeyboardButton(text="ᴜᴘʟᴏᴀᴅ ғɪʟᴇ / ᴘᴀsᴛᴇ sᴛʀɪɴɢ", callback_data="input_readotp", icon_custom_emoji_id="5465451996544837861")])
-        buttons.append([InlineKeyboardButton(text="ʙᴀᴄᴋ ᴛᴏ ᴍᴇɴᴜ", callback_data="back_main", icon_custom_emoji_id="5465665476988315663")])
+            buttons.append([InlineKeyboardButton(text=btn_text, callback_data=f"sel_readotp_{acc['id']}")])
+        buttons.append([InlineKeyboardButton(text="Upload File / Paste String", callback_data="input_readotp")])
+        buttons.append([InlineKeyboardButton(text="Back to Menu", callback_data="back_main")])
         text = """
 <tg-emoji emoji-id="5406935634575124018">📩</tg-emoji> <b>READ TELEGRAM OTP</b>
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -156,10 +156,10 @@ Apne vault se account select karein jiska OTP read karna hai (Chat 777000 se), y
 
     await state.set_state(ToolStates.waiting_read_otp)
     text = """
-<tg-emoji emoji-id="5341492148468465410">📂</tg-emoji> <b>📩 Read OTP</b>
+<tg-emoji emoji-id="5409111052719767901">📁</tg-emoji> <tg-emoji emoji-id="5406935634575124018">📩</tg-emoji> <b>Read OTP</b>
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-<tg-emoji emoji-id="5258113901106580375">⏳</tg-emoji> <b>Waiting for files...</b>
+<tg-emoji emoji-id="5805429164253123352">⏳</tg-emoji> <b>Waiting for files...</b>
 
 Please send files (<code>.session</code>, <code>.zip</code>, <code>.json</code>, <code>.tdata</code>) or session string to read latest Telegram OTP.
 """.strip()
@@ -214,10 +214,10 @@ async def execute_read_otp(message: Message, raw_session: str):
 async def cb_quick_health(query: CallbackQuery, state: FSMContext):
     await state.set_state(ToolStates.waiting_health_session)
     text = """
-<tg-emoji emoji-id="5341492148468465410">📂</tg-emoji> <b>🔍 Check Sessions</b>
+<tg-emoji emoji-id="5409111052719767901">📁</tg-emoji> <tg-emoji emoji-id="5427009714745511175">🔍</tg-emoji> <b>Check Sessions</b>
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-<tg-emoji emoji-id="5258113901106580375">⏳</tg-emoji> <b>Waiting for files...</b>
+<tg-emoji emoji-id="5805429164253123352">⏳</tg-emoji> <b>Waiting for files...</b>
 
 Please send files (<code>.session</code>, <code>.zip</code>, <code>.json</code>, <code>.tdata</code>) or session string to begin.
 """.strip()
@@ -307,10 +307,10 @@ async def execute_health_check(message: Message, raw_session: str):
 async def cb_tool_spambot(query: CallbackQuery, state: FSMContext):
     await state.set_state(ToolStates.waiting_spambot_session)
     text = """
-<tg-emoji emoji-id="5341492148468465410">📂</tg-emoji> <b>🛡️ Spam Check</b>
+<tg-emoji emoji-id="5409111052719767901">📁</tg-emoji> <tg-emoji emoji-id="5420319635037775013">🛡️</tg-emoji> <b>Spam Check</b>
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-<tg-emoji emoji-id="5258113901106580375">⏳</tg-emoji> <b>Waiting for files...</b>
+<tg-emoji emoji-id="5805429164253123352">⏳</tg-emoji> <b>Waiting for files...</b>
 
 Please send files (<code>.session</code>, <code>.zip</code>, <code>.json</code>, <code>.tdata</code>) or session string to check account spam status.
 """.strip()
@@ -360,10 +360,10 @@ async def execute_spambot_check(message: Message, raw_session: str):
 async def cb_a_contact(query: CallbackQuery, state: FSMContext):
     await state.set_state(ToolStates.waiting_contact)
     text = """
-<tg-emoji emoji-id="5341492148468465410">📂</tg-emoji> <b>📇 Contact Tool</b>
+<tg-emoji emoji-id="5409111052719767901">📁</tg-emoji> <tg-emoji emoji-id="5409180749876174620">👤</tg-emoji> <b>Contact Tool</b>
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-<tg-emoji emoji-id="5258113901106580375">⏳</tg-emoji> <b>Waiting for files...</b>
+<tg-emoji emoji-id="5805429164253123352">⏳</tg-emoji> <b>Waiting for files...</b>
 
 Please send files (<code>.session</code>, <code>.zip</code>, <code>.json</code>) or session string to inspect or clean account contacts.
 """.strip()
@@ -403,8 +403,8 @@ async def execute_contact_tool(message: Message, raw_session: str):
 You can clean and delete all contacts linked to this Telegram account below:
 """
         btns = [
-            [InlineKeyboardButton(text="Delete All Contacts", callback_data="action_delete_contacts", icon_custom_emoji_id="5465665476988315663")],
-            [InlineKeyboardButton(text="Cancel", callback_data="cancel_pending_op", icon_custom_emoji_id="5465665476988315663")]
+            [InlineKeyboardButton(text="Delete All Contacts", callback_data="action_delete_contacts")],
+            [InlineKeyboardButton(text="Cancel", callback_data="cancel_pending_op")]
         ]
         await prog.edit_text(text, reply_markup=InlineKeyboardMarkup(inline_keyboard=btns))
     else:
@@ -433,10 +433,10 @@ async def cb_action_del_contacts(query: CallbackQuery):
 async def cb_a_2fa(query: CallbackQuery, state: FSMContext):
     await state.set_state(ToolStates.waiting_2fa_session)
     text = """
-<tg-emoji emoji-id="5341492148468465410">📂</tg-emoji> <b>🔐 2FA Manager</b>
+<tg-emoji emoji-id="5409111052719767901">📁</tg-emoji> <tg-emoji emoji-id="5409320020058584473">🔐</tg-emoji> <b>2FA Manager</b>
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-<tg-emoji emoji-id="5258113901106580375">⏳</tg-emoji> <b>Waiting for files...</b>
+<tg-emoji emoji-id="5805429164253123352">⏳</tg-emoji> <b>Waiting for files...</b>
 
 Please send files (<code>.session</code>, <code>.zip</code>, <code>.json</code>) or session string to check or manage Two-Step Verification.
 """.strip()
@@ -493,10 +493,10 @@ async def execute_2fa_check(message: Message, raw_session: str):
 async def cb_a_split(query: CallbackQuery, state: FSMContext):
     await state.set_state(ToolStates.waiting_split)
     text = """
-📂 <b>✂️ Split File</b>
+<tg-emoji emoji-id="5409111052719767901">📁</tg-emoji> <tg-emoji emoji-id="5465451996544837861">✂️</tg-emoji> <b>Split File</b>
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-⏳ <b>Waiting for files...</b>
+<tg-emoji emoji-id="5805429164253123352">⏳</tg-emoji> <b>Waiting for files...</b>
 
 Please send a <code>.zip</code> archive or multi-session file to split into separate sessions.
 """.strip()
@@ -538,10 +538,10 @@ async def process_split_text(message: Message, state: FSMContext):
 async def cb_cv_s2api(query: CallbackQuery, state: FSMContext):
     await state.set_state(ToolStates.waiting_api_link)
     text = """
-📂 <b>🔗 Session API Link</b>
+<tg-emoji emoji-id="5409111052719767901">📁</tg-emoji> <tg-emoji emoji-id="5445284980978621387">⚡</tg-emoji> <b>Session API Link</b>
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-⏳ <b>Waiting for files...</b>
+<tg-emoji emoji-id="5805429164253123352">⏳</tg-emoji> <b>Waiting for files...</b>
 
 Please send files (<code>.session</code>, <code>.json</code>) or session string to extract or link API credentials.
 """.strip()
@@ -599,10 +599,10 @@ https://my.telegram.org/apps
 async def cb_merge_start(query: CallbackQuery, state: FSMContext):
     await state.set_state(ToolStates.waiting_merge)
     text = """
-📂 <b>📦 Merge Files</b>
+<tg-emoji emoji-id="5409111052719767901">📁</tg-emoji> <tg-emoji emoji-id="5409230963911701228">📦</tg-emoji> <b>Merge Files</b>
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-⏳ <b>Waiting for files...</b>
+<tg-emoji emoji-id="5805429164253123352">⏳</tg-emoji> <b>Waiting for files...</b>
 
 Please send <code>.session</code> or <code>.json</code> files (or multiple sessions) to merge into a single consolidated archive.
 """.strip()
@@ -643,10 +643,10 @@ async def process_merge_text(message: Message, state: FSMContext):
 async def cb_tool_privacy(query: CallbackQuery, state: FSMContext):
     await state.set_state(ToolStates.waiting_privacy_session)
     text = """
-<tg-emoji emoji-id="5341492148468465410">📂</tg-emoji> <b>👁️ Privacy Settings</b>
+<tg-emoji emoji-id="5409111052719767901">📁</tg-emoji> <tg-emoji emoji-id="5449762358052266525">👁️</tg-emoji> <b>Privacy Settings</b>
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-<tg-emoji emoji-id="5258113901106580375">⏳</tg-emoji> <b>Waiting for files...</b>
+<tg-emoji emoji-id="5805429164253123352">⏳</tg-emoji> <b>Waiting for files...</b>
 
 Please send files (<code>.session</code>, <code>.zip</code>, <code>.json</code>) or session string to audit account privacy settings.
 """.strip()
@@ -696,10 +696,10 @@ async def execute_privacy_check(message: Message, raw_session: str):
 async def cb_tool_check_age(query: CallbackQuery, state: FSMContext):
     await state.set_state(ToolStates.waiting_age_session)
     text = """
-<tg-emoji emoji-id="5341492148468465410">📂</tg-emoji> <b>📅 Check Age</b>
+<tg-emoji emoji-id="5409111052719767901">📁</tg-emoji> <tg-emoji emoji-id="5431442100417749005">⭐</tg-emoji> <b>Check Age</b>
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-<tg-emoji emoji-id="5258113901106580375">⏳</tg-emoji> <b>Waiting for files...</b>
+<tg-emoji emoji-id="5805429164253123352">⏳</tg-emoji> <b>Waiting for files...</b>
 
 Please send Telegram User ID or session file (<code>.session</code>, <code>.zip</code>, <code>.json</code>) to check registration date.
 """.strip()
@@ -757,10 +757,10 @@ async def execute_age_check(message: Message, val: str):
 async def cb_tool_converter(query: CallbackQuery, state: FSMContext):
     await state.set_state(ToolStates.waiting_convert_session)
     text = """
-<tg-emoji emoji-id="5341492148468465410">📂</tg-emoji> <b>🔄 Converter</b>
+<tg-emoji emoji-id="5409111052719767901">📁</tg-emoji> <tg-emoji emoji-id="5445284980978621387">🔄</tg-emoji> <b>Converter</b>
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-<tg-emoji emoji-id="5258113901106580375">⏳</tg-emoji> <b>Waiting for files...</b>
+<tg-emoji emoji-id="5805429164253123352">⏳</tg-emoji> <b>Waiting for files...</b>
 
 Please send files (<code>.session</code>, <code>.json</code>) or session string to convert between Pyrogram and Telethon format.
 """.strip()
@@ -813,10 +813,10 @@ async def execute_converter(message: Message, raw_session: str):
 async def cb_tool_leave(query: CallbackQuery, state: FSMContext):
     await state.set_state(ToolStates.waiting_leave_session)
     text = """
-<tg-emoji emoji-id="5341492148468465410">📂</tg-emoji> <b>🚪 Leave Groups & Channels</b>
+<tg-emoji emoji-id="5409111052719767901">📁</tg-emoji> <tg-emoji emoji-id="5465665476988315663">🚪</tg-emoji> <b>Leave Groups & Channels</b>
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-<tg-emoji emoji-id="5258113901106580375">⏳</tg-emoji> <b>Waiting for files...</b>
+<tg-emoji emoji-id="5805429164253123352">⏳</tg-emoji> <b>Waiting for files...</b>
 
 Please send files (<code>.session</code>, <code>.zip</code>, <code>.json</code>) or session string to leave all channels and groups.
 """.strip()
@@ -858,10 +858,10 @@ async def execute_leave_chats(message: Message, raw_session: str):
 async def cb_tool_delete_dialogs(query: CallbackQuery, state: FSMContext):
     await state.set_state(ToolStates.waiting_delete_dialogs_session)
     text = """
-<tg-emoji emoji-id="5341492148468465410">📂</tg-emoji> <b>🗑️ Clear Data</b>
+<tg-emoji emoji-id="5409111052719767901">📁</tg-emoji> <tg-emoji emoji-id="5465665476988315663">🧹</tg-emoji> <b>Clear Data</b>
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-<tg-emoji emoji-id="5258113901106580375">⏳</tg-emoji> <b>Waiting for files...</b>
+<tg-emoji emoji-id="5805429164253123352">⏳</tg-emoji> <b>Waiting for files...</b>
 
 Please send files (<code>.session</code>, <code>.zip</code>, <code>.json</code>) or session string to delete all private dialogs and chats.
 """.strip()
@@ -997,9 +997,9 @@ async def cb_fpview(query: CallbackQuery):
 💡 <i>Is fingerprint se generate kiya hua session Telegram settings me issi real device ke roop me appear hoga.</i>
 """
     buttons = [
-        [InlineKeyboardButton(text=f"Generate Session with {fp['name'][:18]}", callback_data=f"fpgen_{dev_key}", icon_custom_emoji_id="5445284980978621387")],
-        [InlineKeyboardButton(text="Back to Devices", callback_data="tool_fingerprints", icon_custom_emoji_id="5409180749876174620")],
-        [InlineKeyboardButton(text="Cancel", callback_data="cancel_pending_op", icon_custom_emoji_id="5465665476988315663")]
+        [InlineKeyboardButton(text=f"Generate Session with {fp['name'][:18]}", callback_data=f"fpgen_{dev_key}")],
+        [InlineKeyboardButton(text="Back to Devices", callback_data="tool_fingerprints")],
+        [InlineKeyboardButton(text="Cancel", callback_data="cancel_pending_op")]
     ]
     await query.message.edit_text(text, reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons))
 
@@ -1210,8 +1210,8 @@ async def handle_document_upload(message: Message, state: FSMContext):
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
             btns = [
-                [InlineKeyboardButton(text="Open Encrypted Vault", callback_data="menu_vault", icon_custom_emoji_id="5409180749876174620")],
-                [InlineKeyboardButton(text="Cancel", callback_data="cancel_pending_op", icon_custom_emoji_id="5465665476988315663")]
+                [InlineKeyboardButton(text="Open Encrypted Vault", callback_data="menu_vault")],
+                [InlineKeyboardButton(text="Cancel", callback_data="cancel_pending_op")]
             ]
             await status_msg.edit_text(text, reply_markup=InlineKeyboardMarkup(inline_keyboard=btns))
 
@@ -1243,10 +1243,10 @@ async def handle_direct_text_message(message: Message, state: FSMContext):
         if not clean_num.startswith("+"):
             clean_num = "+" + clean_num
         btns = [
-            [InlineKeyboardButton(text="ǫʀ ᴄᴏᴅᴇ ʟᴏɢɪɴ (ɴᴏ ᴏᴛᴘ)", callback_data="gen_qr", icon_custom_emoji_id="5445284980978621387")],
-            [InlineKeyboardButton(text="ᴘʏʀᴏɢʀᴀᴍ (ᴠ𝟸)", callback_data="gen_pyrogram", icon_custom_emoji_id="5445284980978621387"),
-             InlineKeyboardButton(text="ᴛᴇʟᴇᴛʜᴏɴ", callback_data="gen_telethon", icon_custom_emoji_id="5445284980978621387")],
-            [InlineKeyboardButton(text="ᴍᴀɪɴ ᴍᴇɴᴜ", callback_data="back_main", icon_custom_emoji_id="5465665476988315663")]
+            [InlineKeyboardButton(text="QR Code Login (Instant)", callback_data="gen_qr")],
+            [InlineKeyboardButton(text="Pyrogram (v2)", callback_data="gen_pyrogram"),
+             InlineKeyboardButton(text="Telethon", callback_data="gen_telethon")],
+            [InlineKeyboardButton(text="Main Menu", callback_data="back_main")]
         ]
         msg = f"""
 <tg-emoji emoji-id="5409180749876174620">📞</tg-emoji> <b>Phone Number Detected:</b> <code>{clean_num}</code>
@@ -1321,11 +1321,11 @@ Session generate karne ke liye tarika chunein:
 <i>Session ultra-secure AES encryption ke sath vault me save ho gaya hai!</i>
 """.strip()
             btns = [
-                [InlineKeyboardButton(text="ʀᴇᴀᴅ ᴏᴛᴘ", callback_data=f"sel_readotp_{acc['id']}", icon_custom_emoji_id="5406935634575124018")],
-                [InlineKeyboardButton(text="sᴘᴀᴍ ᴄʜᴇᴄᴋ", callback_data=f"sel_spam_{acc['id']}", icon_custom_emoji_id="5420319635037775013"),
-                 InlineKeyboardButton(text="ᴛᴇʀᴍɪɴᴀᴛᴇ ᴏᴛʜᴇʀs", callback_data=f"sel_term_{acc['id']}", icon_custom_emoji_id="5465665476988315663")],
-                [InlineKeyboardButton(text="ᴏᴘᴇɴ ᴠᴀᴜʟᴛ", callback_data="menu_vault", icon_custom_emoji_id="5409180749876174620"),
-                 InlineKeyboardButton(text="ᴍᴀɪɴ ᴍᴇɴᴜ", callback_data="back_main", icon_custom_emoji_id="5465665476988315663")]
+                [InlineKeyboardButton(text="Read OTP", callback_data=f"sel_readotp_{acc['id']}")],
+                [InlineKeyboardButton(text="Spam Check", callback_data=f"sel_spam_{acc['id']}"),
+                 InlineKeyboardButton(text="Terminate Others", callback_data=f"sel_term_{acc['id']}")],
+                [InlineKeyboardButton(text="Open Vault", callback_data="menu_vault"),
+                 InlineKeyboardButton(text="Main Menu", callback_data="back_main")]
             ]
             await status_msg.edit_text(card, reply_markup=InlineKeyboardMarkup(inline_keyboard=btns))
             return
@@ -1339,8 +1339,8 @@ Session generate karne ke liye tarika chunein:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
             btns = [
-                [InlineKeyboardButton(text="ᴏᴘᴇɴ ᴠᴀᴜʟᴛ", callback_data="menu_vault", icon_custom_emoji_id="5409180749876174620")],
-                [InlineKeyboardButton(text="ᴍᴀɪɴ ᴍᴇɴᴜ", callback_data="back_main", icon_custom_emoji_id="5465665476988315663")]
+                [InlineKeyboardButton(text="Open Vault", callback_data="menu_vault")],
+                [InlineKeyboardButton(text="Main Menu", callback_data="back_main")]
             ]
             await status_msg.edit_text(batch_text, reply_markup=InlineKeyboardMarkup(inline_keyboard=btns))
             return
