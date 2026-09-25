@@ -43,18 +43,30 @@ async def cb_menu_generate(query: CallbackQuery, state: FSMContext):
 ╭━━━━━━━━━━━━━━━━━━━━╮
 │  ⚡ <b>ɢᴇɴᴇʀᴀᴛᴇ sᴇssɪᴏɴ sᴛʀɪɴɢ</b>  │
 ╰━━━━━━━━━━━━━━━━━━━━╯
-Kripya select karein aapko kis library ka String Session generate karna hai:
+Apne account ka session generate karne ke tareeqe:
 
-🔹 <b>Pyrogram (v2):</b> Modern bots, userbots, and automation ke liye.
-🔹 <b>Telethon:</b> Official MTProto features and stable tools ke liye.
-"""
+🌟 <b>1. ǫʀ ᴄᴏᴅᴇ ʟᴏɢɪɴ (ʀᴇᴄᴏᴍᴍᴇɴᴅᴇᴅ - ɴᴏ ᴏᴛᴘ!):</b>
+• <b>Zero OTP wait:</b> Instant 1-second login!
+• Telegram App ➔ <b>Settings > Devices > Link Desktop Device</b> se scan karein.
+
+📱 <b>2. ᴘʏʀᴏɢʀᴀᴍ / ᴛᴇʟᴇᴛʜᴏɴ (ᴘʜᴏɴᴇ ᴏᴛᴘ):</b>
+• Phone number enter karke official Telegram App (Chat 777000) me OTP mangwayein.
+""".strip()
     await query.message.edit_text(text, reply_markup=session_type_keyboard())
 
 @router.callback_query(F.data == "gen_qr")
 async def cb_gen_qr(query: CallbackQuery, state: FSMContext):
     await state.clear()
-    status = await query.message.edit_text("🔄 <i>Generating official Telegram QR Code... Please wait.</i>")
-    client = TelegramClient(StringSession(), config.API_ID, config.API_HASH)
+    client = TelegramClient(
+        StringSession(),
+        2040,
+        "b1844f23573e270e4414b3254461aeea",
+        device_model="Telegram Desktop",
+        system_version="Windows 11 x64",
+        app_version="5.2.2 x64",
+        lang_code="en",
+        system_lang_code="en-US"
+    )
     try:
         await client.connect()
         qr_login = await client.qr_login()
