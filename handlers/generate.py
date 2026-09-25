@@ -40,23 +40,26 @@ router = Router()
 async def cb_menu_generate(query: CallbackQuery, state: FSMContext):
     await state.clear()
     text = """
-╭━━━━━━━━━━━━━━━━━━━━╮
-│  ⚡ <b>ɢᴇɴᴇʀᴀᴛᴇ sᴇssɪᴏɴ sᴛʀɪɴɢ</b>  │
-╰━━━━━━━━━━━━━━━━━━━━╯
+<tg-emoji emoji-id="5445284980978621387">⚡</tg-emoji> <b>ɢᴇɴᴇʀᴀᴛᴇ sᴇssɪᴏɴ sᴛʀɪɴɢ</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Apne account ka session generate karne ke tareeqe:
 
-🌟 <b>1. ǫʀ ᴄᴏᴅᴇ ʟᴏɢɪɴ (ʀᴇᴄᴏᴍᴍᴇɴᴅᴇᴅ - ɴᴏ ᴏᴛᴘ!):</b>
+<tg-emoji emoji-id="5931718859366075705">✨</tg-emoji> <b>1. ǫʀ ᴄᴏᴅᴇ ʟᴏɢɪɴ (ʀᴇᴄᴏᴍᴍᴇɴᴅᴇᴅ - ɴᴏ ᴏᴛᴘ!):</b>
 • <b>Zero OTP wait:</b> Instant 1-second login!
 • Telegram App ➔ <b>Settings > Devices > Link Desktop Device</b> se scan karein.
 
-📱 <b>2. ᴘʏʀᴏɢʀᴀᴍ / ᴛᴇʟᴇᴛʜᴏɴ (ᴘʜᴏɴᴇ ᴏᴛᴘ):</b>
+<tg-emoji emoji-id="5406935634575124018">📩</tg-emoji> <b>2. ᴘʏʀᴏɢʀᴀᴍ / ᴛᴇʟᴇᴛʜᴏɴ (ᴘʜᴏɴᴇ ᴏᴛᴘ):</b>
 • Phone number enter karke official Telegram App (Chat 777000) me OTP mangwayein.
 """.strip()
-    await query.message.edit_text(text, reply_markup=session_type_keyboard())
+    try:
+        await query.message.edit_text(text, reply_markup=session_type_keyboard())
+    except Exception:
+        await query.message.answer(text, reply_markup=session_type_keyboard())
 
 @router.callback_query(F.data == "gen_qr")
 async def cb_gen_qr(query: CallbackQuery, state: FSMContext):
     await state.clear()
+    status_msg = await query.message.answer("🔄 <i>Generating official Telegram QR Code... Please wait.</i>")
     client = TelegramClient(
         StringSession(),
         2040,
@@ -78,19 +81,19 @@ async def cb_gen_qr(query: CallbackQuery, state: FSMContext):
 
         photo = BufferedInputFile(buf.getvalue(), filename="telegram_qr_login.png")
         try:
-            await status.delete()
+            await status_msg.delete()
         except Exception:
             pass
 
         qr_msg = await query.message.answer_photo(
             photo,
             caption=(
-                "📷 <b>SCAN QR CODE TO LOGIN (INSTANT)</b>\n"
+                "<tg-emoji emoji-id=\"5445284980978621387\">⚡</tg-emoji> <b>SCAN QR CODE TO LOGIN (INSTANT)</b>\n"
                 "━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-                "1️⃣ Apne mobile me official <b>Telegram App</b> open karein.\n"
-                "2️⃣ <b>Settings > Devices > Link Desktop Device</b> par click karein.\n"
-                "3️⃣ Apna camera is QR Code par point karke scan karein!\n\n"
-                "⚡ <b>Koi OTP / SMS nahi lagega! Session turant generate ho jayega.</b>\n"
+                "1. Apne mobile me official <b>Telegram App</b> open karein.\n"
+                "2. <b>Settings > Devices > Link Desktop Device</b> par click karein.\n"
+                "3. Apna camera is QR Code par point karke scan karein!\n\n"
+                "<tg-emoji emoji-id=\"5931718859366075705\">✨</tg-emoji> <b>Koi OTP / SMS nahi lagega! Session turant generate ho jayega.</b>\n"
                 "⏳ <i>Valid for 60 seconds... Waiting for scan.</i>"
             ),
             reply_markup=cancel_keyboard()
