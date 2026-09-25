@@ -59,7 +59,7 @@ async def cb_manage_acc(query: CallbackQuery):
         return
 
     text = f"""
-<tg-emoji emoji-id="5409180749876174620">👤</tg-emoji> <b>Account Card: {acc['account_name']}</b>
+<tg-emoji emoji-id="5408846628763217930">👤</tg-emoji> <b>Account Card: {acc['account_name']}</b>
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 📞 <b>Phone:</b> <code>{acc['phone'] or 'N/A'}</code>
 🆔 <b>User ID:</b> <code>{acc['tg_user_id'] or 'N/A'}</code>
@@ -249,6 +249,6 @@ async def cb_vault_export(query: CallbackQuery):
     await query.bot.send_document(
         chat_id=user_id,
         document=doc,
-        caption="<tg-emoji emoji-id=\"5420319635037775013\">🛡️</tg-emoji> <b>Here is your Vault Backup file!</b>\n\n<i>Keep this file completely confidential.</i>"
+        caption="<tg-emoji emoji-id=\"5409320020058584473\">🛡️</tg-emoji> <b>Here is your Vault Backup file!</b>\n\n<i>Keep this file completely confidential.</i>"
     )
     await query.message.reply("<tg-emoji emoji-id=\"5219774501876671323\">✅</tg-emoji> Backup file sent above!", reply_markup=InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="Back to Vault", callback_data="menu_vault")]]))
