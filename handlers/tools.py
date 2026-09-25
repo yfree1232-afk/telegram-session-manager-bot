@@ -89,10 +89,10 @@ async def extract_all_sessions_from_msg(message: Message) -> list[dict]:
 def make_tool_selection_keyboard(accounts: list, tool_code: str) -> InlineKeyboardMarkup:
     buttons = []
     for acc in accounts:
-        btn_text = f"👤 {acc['account_name']} ({acc['phone']})"
+        btn_text = f"{acc['account_name']} ({acc['phone']})"
         buttons.append([InlineKeyboardButton(text=btn_text, callback_data=f"sel_{tool_code}_{acc['id']}", icon_custom_emoji_id="5409180749876174620")])
-    buttons.append([InlineKeyboardButton(text="📥 ᴜᴘʟᴏᴀᴅ ғɪʟᴇ / ᴘᴀsᴛᴇ sᴛʀɪɴɢ", callback_data=f"input_{tool_code}", icon_custom_emoji_id="5465451996544837861")])
-    buttons.append([InlineKeyboardButton(text="🔙 ʙᴀᴄᴋ ᴛᴏ ᴍᴇɴᴜ", callback_data="back_main", icon_custom_emoji_id="5465665476988315663")])
+    buttons.append([InlineKeyboardButton(text="ᴜᴘʟᴏᴀᴅ ғɪʟᴇ / ᴘᴀsᴛᴇ sᴛʀɪɴɢ", callback_data=f"input_{tool_code}", icon_custom_emoji_id="5465451996544837861")])
+    buttons.append([InlineKeyboardButton(text="ʙᴀᴄᴋ ᴛᴏ ᴍᴇɴᴜ", callback_data="back_main", icon_custom_emoji_id="5465665476988315663")])
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 @router.callback_query(F.data.startswith("sel_"))
@@ -142,12 +142,12 @@ async def cb_a_read_otp(query: CallbackQuery, state: FSMContext):
         await state.clear()
         buttons = []
         for acc in accounts:
-            btn_text = f"👤 {acc['account_name']} ({acc['phone'] or 'Account'})"
+            btn_text = f"{acc['account_name']} ({acc['phone'] or 'Account'})"
             buttons.append([InlineKeyboardButton(text=btn_text, callback_data=f"sel_readotp_{acc['id']}", icon_custom_emoji_id="5409180749876174620")])
-        buttons.append([InlineKeyboardButton(text="📥 ᴜᴘʟᴏᴀᴅ ғɪʟᴇ / ᴘᴀsᴛᴇ sᴛʀɪɴɢ", callback_data="input_readotp", icon_custom_emoji_id="5465451996544837861")])
-        buttons.append([InlineKeyboardButton(text="🔙 ʙᴀᴄᴋ ᴛᴏ ᴍᴇɴᴜ", callback_data="back_main", icon_custom_emoji_id="5465665476988315663")])
+        buttons.append([InlineKeyboardButton(text="ᴜᴘʟᴏᴀᴅ ғɪʟᴇ / ᴘᴀsᴛᴇ sᴛʀɪɴɢ", callback_data="input_readotp", icon_custom_emoji_id="5465451996544837861")])
+        buttons.append([InlineKeyboardButton(text="ʙᴀᴄᴋ ᴛᴏ ᴍᴇɴᴜ", callback_data="back_main", icon_custom_emoji_id="5465665476988315663")])
         text = """
-📩 <b>READ TELEGRAM OTP</b>
+<tg-emoji emoji-id="5406935634575124018">📩</tg-emoji> <b>READ TELEGRAM OTP</b>
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Apne vault se account select karein jiska OTP read karna hai (Chat 777000 se), ya naya file upload karein:
 """.strip()
@@ -1243,21 +1243,21 @@ async def handle_direct_text_message(message: Message, state: FSMContext):
         if not clean_num.startswith("+"):
             clean_num = "+" + clean_num
         btns = [
-            [InlineKeyboardButton(text="📷 ǫʀ ᴄᴏᴅᴇ ʟᴏɢɪɴ (ɴᴏ ᴏᴛᴘ ɴᴇᴇᴅᴇᴅ!)", callback_data="gen_qr", icon_custom_emoji_id="5445284980978621387")],
-            [InlineKeyboardButton(text="⚡ ᴘʏʀᴏɢʀᴀᴍ (ᴠ𝟸)", callback_data="gen_pyrogram", icon_custom_emoji_id="5445284980978621387"),
-             InlineKeyboardButton(text="⚡ ᴛᴇʟᴇᴛʜᴏɴ", callback_data="gen_telethon", icon_custom_emoji_id="5445284980978621387")],
-            [InlineKeyboardButton(text="🔙 ᴍᴀɪɴ ᴍᴇɴᴜ", callback_data="back_main", icon_custom_emoji_id="5465665476988315663")]
+            [InlineKeyboardButton(text="ǫʀ ᴄᴏᴅᴇ ʟᴏɢɪɴ (ɴᴏ ᴏᴛᴘ)", callback_data="gen_qr", icon_custom_emoji_id="5445284980978621387")],
+            [InlineKeyboardButton(text="ᴘʏʀᴏɢʀᴀᴍ (ᴠ𝟸)", callback_data="gen_pyrogram", icon_custom_emoji_id="5445284980978621387"),
+             InlineKeyboardButton(text="ᴛᴇʟᴇᴛʜᴏɴ", callback_data="gen_telethon", icon_custom_emoji_id="5445284980978621387")],
+            [InlineKeyboardButton(text="ᴍᴀɪɴ ᴍᴇɴᴜ", callback_data="back_main", icon_custom_emoji_id="5465665476988315663")]
         ]
         msg = f"""
-📞 <b>Phone Number Detected:</b> <code>{clean_num}</code>
+<tg-emoji emoji-id="5409180749876174620">📞</tg-emoji> <b>Phone Number Detected:</b> <code>{clean_num}</code>
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Session generate karne ke liye tarika chunein:
 
-🌟 <b>1. ǫʀ ᴄᴏᴅᴇ ʟᴏɢɪɴ (ʀᴇᴄᴏᴍᴍᴇɴᴅᴇᴅ):</b>
-• <b>Zero OTP / SMS:</b> Koi OTP wait nahi!
-• Apne Telegram app me <b>Settings > Devices > Link Desktop Device</b> se scan karein aur 1 sec me login ho jayega.
+<tg-emoji emoji-id="5445284980978621387">⚡</tg-emoji> <b>1. ǫʀ ᴄᴏᴅᴇ ʟᴏɢɪɴ (ʀᴇᴄᴏᴍᴍᴇɴᴅᴇᴅ):</b>
+• <b>Zero OTP wait:</b> Instant login!
+• Apne Telegram app me <b>Settings > Devices > Link Desktop Device</b> se scan karein.
 
-📱 <b>2. ᴘʏʀᴏɢʀᴀᴍ / ᴛᴇʟᴇᴛʜᴏɴ:</b>
+<tg-emoji emoji-id="5406935634575124018">📩</tg-emoji> <b>2. ᴘʏʀᴏɢʀᴀᴍ / ᴛᴇʟᴇᴛʜᴏɴ:</b>
 • Official Telegram App (Chat 777000) me login OTP mangwayein.
 """.strip()
         await message.reply(msg, reply_markup=InlineKeyboardMarkup(inline_keyboard=btns))
@@ -1309,45 +1309,45 @@ Session generate karne ke liye tarika chunein:
         if len(lines) == 1 and saved_accs:
             acc = saved_accs[0]
             card = f"""
-🎉 <b>SESSION VERIFIED & SAVED TO VAULT!</b>
+<tg-emoji emoji-id="5931718859366075705">✨</tg-emoji> <b>SESSION VERIFIED & SAVED TO VAULT!</b>
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-👤 <b>Account:</b> {acc['name']}
-📞 <b>Phone:</b> <code>{acc['phone']}</code>
-🆔 <b>User ID:</b> <code>{acc['user_id']}</code>
-🌐 <b>Data Center:</b> DC {acc['dc_id']}
-💎 <b>Premium:</b> {'Yes ⭐️' if acc['is_premium'] else 'No'}
-⚡ <b>Engine:</b> <code>{acc['type'].upper()}</code>
+<b>Account:</b> {acc['name']}
+<b>Phone:</b> <code>{acc['phone']}</code>
+<b>User ID:</b> <code>{acc['user_id']}</code>
+<b>Data Center:</b> DC {acc['dc_id']}
+<b>Premium:</b> {'Yes' if acc['is_premium'] else 'No'}
+<b>Engine:</b> <code>{acc['type'].upper()}</code>
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-💾 <i>Session ultra-secure AES encryption ke sath vault me save ho gaya hai!</i>
+<i>Session ultra-secure AES encryption ke sath vault me save ho gaya hai!</i>
 """.strip()
             btns = [
-                [InlineKeyboardButton(text="📩 ʀᴇᴀᴅ ᴏᴛᴘ", callback_data=f"sel_readotp_{acc['id']}", icon_custom_emoji_id="5406935634575124018")],
-                [InlineKeyboardButton(text="🛡️ sᴘᴀᴍ ᴄʜᴇᴄᴋ", callback_data=f"sel_spam_{acc['id']}", icon_custom_emoji_id="5420319635037775013"),
-                 InlineKeyboardButton(text="📱 ᴛᴇʀᴍɪɴᴀᴛᴇ ᴏᴛʜᴇʀs", callback_data=f"sel_term_{acc['id']}", icon_custom_emoji_id="5465665476988315663")],
-                [InlineKeyboardButton(text="💼 ᴏᴘᴇɴ ᴠᴀᴜʟᴛ", callback_data="menu_vault", icon_custom_emoji_id="5409180749876174620"),
-                 InlineKeyboardButton(text="🔙 ᴍᴀɪɴ ᴍᴇɴᴜ", callback_data="back_main", icon_custom_emoji_id="5465665476988315663")]
+                [InlineKeyboardButton(text="ʀᴇᴀᴅ ᴏᴛᴘ", callback_data=f"sel_readotp_{acc['id']}", icon_custom_emoji_id="5406935634575124018")],
+                [InlineKeyboardButton(text="sᴘᴀᴍ ᴄʜᴇᴄᴋ", callback_data=f"sel_spam_{acc['id']}", icon_custom_emoji_id="5420319635037775013"),
+                 InlineKeyboardButton(text="ᴛᴇʀᴍɪɴᴀᴛᴇ ᴏᴛʜᴇʀs", callback_data=f"sel_term_{acc['id']}", icon_custom_emoji_id="5465665476988315663")],
+                [InlineKeyboardButton(text="ᴏᴘᴇɴ ᴠᴀᴜʟᴛ", callback_data="menu_vault", icon_custom_emoji_id="5409180749876174620"),
+                 InlineKeyboardButton(text="ᴍᴀɪɴ ᴍᴇɴᴜ", callback_data="back_main", icon_custom_emoji_id="5465665476988315663")]
             ]
             await status_msg.edit_text(card, reply_markup=InlineKeyboardMarkup(inline_keyboard=btns))
             return
         elif len(lines) > 1:
             batch_text = f"""
-🎉 <b>BATCH SESSIONS PROCESSED!</b>
+<tg-emoji emoji-id="5931718859366075705">✨</tg-emoji> <b>BATCH SESSIONS PROCESSED!</b>
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📁 <b>Total Received:</b> <code>{len(lines)}</code>
-🟢 <b>Alive & Saved to Vault:</b> <code>{len(saved_accs)}</code>
-🔴 <b>Dead / Invalid:</b> <code>{len(errors)}</code>
+<b>Total Received:</b> <code>{len(lines)}</code>
+<b>Alive & Saved to Vault:</b> <code>{len(saved_accs)}</code>
+<b>Dead / Invalid:</b> <code>{len(errors)}</code>
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
             btns = [
-                [InlineKeyboardButton(text="💼 Open Vault", callback_data="menu_vault", icon_custom_emoji_id="5409180749876174620")],
-                [InlineKeyboardButton(text="🔙 Main Menu", callback_data="back_main", icon_custom_emoji_id="5465665476988315663")]
+                [InlineKeyboardButton(text="ᴏᴘᴇɴ ᴠᴀᴜʟᴛ", callback_data="menu_vault", icon_custom_emoji_id="5409180749876174620")],
+                [InlineKeyboardButton(text="ᴍᴀɪɴ ᴍᴇɴᴜ", callback_data="back_main", icon_custom_emoji_id="5465665476988315663")]
             ]
             await status_msg.edit_text(batch_text, reply_markup=InlineKeyboardMarkup(inline_keyboard=btns))
             return
         else:
             err_msg = errors[0] if errors else "Invalid session format"
             await status_msg.edit_text(
-                f"❌ <b>Session is Dead or Invalid!</b>\n\nTelegram Error: <code>{err_msg}</code>\n\n<i>Kripya live/valid session string bhejein ya QR code se naya generate karein.</i>",
+                f"<tg-emoji emoji-id=\"5465665476988315663\">❌</tg-emoji> <b>Session is Dead or Invalid!</b>\n\nTelegram Error: <code>{err_msg}</code>\n\n<i>Kripya live/valid session string bhejein ya QR code se naya generate karein.</i>",
                 reply_markup=back_to_main_keyboard()
             )
             return
@@ -1355,7 +1355,7 @@ Session generate karne ke liye tarika chunein:
     # 3. If user typed standard conversation greetings like 'hi', 'hello'
     acc_count = await db.count_user_accounts(user_id)
     await message.reply(
-        "👋 <b>Namaste! Main ICE Bot Session Manager hoon.</b>\n\n"
-        "⚡ Niche diye gaye menu se koi bhi feature use karein, ya direct <code>.session</code> / <code>.zip</code> file bhejein:",
+        "<tg-emoji emoji-id=\"5931718859366075705\">✨</tg-emoji> <b>Namaste! Main ICE Bot Session Manager hoon.</b>\n\n"
+        "<tg-emoji emoji-id=\"5445284980978621387\">⚡</tg-emoji> Niche diye gaye menu se koi bhi feature use karein, ya direct <code>.session</code> / <code>.zip</code> file bhejein:",
         reply_markup=main_menu_keyboard(config.OWNER_ID, user_id, acc_count)
     )
