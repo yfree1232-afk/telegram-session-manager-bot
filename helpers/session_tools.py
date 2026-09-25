@@ -396,8 +396,8 @@ DEVICE_FINGERPRINTS = {
         "app_version": "5.2.2 x64",
         "lang_code": "en",
         "system_lang_code": "en-US",
-        "api_id": config.API_ID,
-        "api_hash": config.API_HASH
+        "api_id": 2040,
+        "api_hash": "b1844f23573e270e4414b3254461aeea"
     },
     "samsung": {
         "name": "Samsung Galaxy S24 Ultra",
@@ -407,8 +407,8 @@ DEVICE_FINGERPRINTS = {
         "app_version": "10.14.0 (4822)",
         "lang_code": "en",
         "system_lang_code": "en-US",
-        "api_id": config.API_ID,
-        "api_hash": config.API_HASH
+        "api_id": 6,
+        "api_hash": "eb06d4abfb49dc3eeb1aeb98ae0f581e"
     },
     "iphone": {
         "name": "Apple iPhone 15 Pro Max",
@@ -418,8 +418,8 @@ DEVICE_FINGERPRINTS = {
         "app_version": "10.14.1",
         "lang_code": "en",
         "system_lang_code": "en-US",
-        "api_id": config.API_ID,
-        "api_hash": config.API_HASH
+        "api_id": 10840,
+        "api_hash": "b73c48006b539b7a421df0c10ea6c757"
     },
     "desktop": {
         "name": "Windows 11 PC (64-bit)",
@@ -429,8 +429,8 @@ DEVICE_FINGERPRINTS = {
         "app_version": "5.2.2 x64",
         "lang_code": "en",
         "system_lang_code": "en-US",
-        "api_id": config.API_ID,
-        "api_hash": config.API_HASH
+        "api_id": 2040,
+        "api_hash": "b1844f23573e270e4414b3254461aeea"
     },
     "macos": {
         "name": "Apple MacBook Pro M3",
@@ -440,8 +440,8 @@ DEVICE_FINGERPRINTS = {
         "app_version": "10.14.2",
         "lang_code": "en",
         "system_lang_code": "en-US",
-        "api_id": config.API_ID,
-        "api_hash": config.API_HASH
+        "api_id": 2040,
+        "api_hash": "b1844f23573e270e4414b3254461aeea"
     },
     "xiaomi": {
         "name": "Xiaomi 14 Pro",
@@ -451,8 +451,8 @@ DEVICE_FINGERPRINTS = {
         "app_version": "10.14.0 (4822)",
         "lang_code": "en",
         "system_lang_code": "en-US",
-        "api_id": config.API_ID,
-        "api_hash": config.API_HASH
+        "api_id": 6,
+        "api_hash": "eb06d4abfb49dc3eeb1aeb98ae0f581e"
     }
 }
 
